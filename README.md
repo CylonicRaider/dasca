@@ -1,0 +1,2 @@
+# dasca
+An idle game.
