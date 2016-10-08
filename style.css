@@ -1,0 +1,45 @@
+
+/* Dasca, an idle game by @CylonicRaider (github.com/CylonicRaider/dasca)
+ * Stylesheet */
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body, #game {
+  background: black;
+  color: white;
+}
+
+#game {
+  font: 5vmin serif;
+}
+
+#game, #game > .layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.layer.text-popup {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+h1 {
+  font-variant: small-caps;
+  letter-spacing: 0.1em;
+}
+.subtitle {
+  font-style: italic;
+}
+
+.text-popup > hr {
+  border: none;
+  height: 0.2em;
+}
