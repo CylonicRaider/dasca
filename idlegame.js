@@ -49,11 +49,11 @@ function serialize(obj) {
   return JSON.stringify(obj, function(name, value) {
     /* Only transform object values */
     if (typeof value != "object" || Array.isArray(value)) return value;
-    /* Get a meaningful constructor value */
+    /* Get a meaningful constructor name */
     var cons = value.constructor.name;
     if (! cons) cons = Object.prototype.toString(value).slice(8, -1);
     if (cons == "Object") cons = undefined;
-    /* Copy properties into new object */
+    /* Copy properties into new object, or let object serialize itself */
     var ret;
     if (value.constructor.__save__) {
       ret = value.constructor.__save__(value);
@@ -67,6 +67,7 @@ function serialize(obj) {
     return ret;
   });
 }
+
 /* Deserialize a JSON string into an object structure */
 function deserialize(obj) {
   return JSON.parse(obj, function(name, value) {
