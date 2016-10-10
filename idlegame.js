@@ -43,3 +43,53 @@ Clock.realTime = function(scale) {
   if (scale == null) scale = 1.0;
   return new Clock(performance.now.bind(performance), scale * 1e-3);
 };
+
+/* Serialize an object tree to JSON, storing type information */
+function serialize(obj) {
+  return JSON.stringify(obj, function(name, value) {
+    /* Only transform object values */
+    if (typeof value != "object" || Array.isArray(value)) return value;
+    /* Get a meaningful constructor value */
+    var cons = value.constructor.name;
+    if (! cons) cons = Object.prototype.toString(value).slice(8, -1);
+    if (cons == "Object") cons = undefined;
+    /* Copy properties into new object */
+    var ret;
+    if (value.constructor.__save__) {
+      ret = value.constructor.__save__(value);
+    } else {
+      ret = {};
+      for (var prop in value) ret[prop] = value[prop];
+    }
+    /* Add __type__ */
+    ret.__type__ = cons;
+    /* Done */
+    return ret;
+  });
+}
+/* Deserialize a JSON string into an object structure */
+function deserialize(obj) {
+  return JSON.parse(obj, function(name, value) {
+    /* Ignore non-objects */
+    if (typeof value != "object" || Array.isArray(value)) return value;
+    /* Check for a __type__ */
+    if (value.__type__) {
+      /* Obtain type object */
+      var type = window[value.__type__];
+      if (type && type.__restore__) {
+        /* Use restorer function */
+        value = type.__restore__(value);
+      } else if (type) {
+        /* Assume an object is deserializable as-is */
+        var newVal = Object.create(type.prototype);
+        for (var k in value) if (! /^__.+__$/.test(k)) newVal[k] = value[k];
+        value = newVal;
+      } else {
+        /* Nope */
+        throw new Error("Object not deserializable (cannot find type): " +
+                        JSON.stringify(value));
+      }
+    }
+    return value;
+  });
+}
