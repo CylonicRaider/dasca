@@ -33,15 +33,35 @@ Clock.prototype = {
   derive: function(scale, offset) {
     if (scale == null) scale = 1.0;
     if (offset != null) offset = this.offset * scale + offset;
-    return new Clock(this.source, this.scale * scale, offset);
-  }
+    var ret = new Clock(this.source, this.scale * scale, offset);
+    if (this._realTime) ret._realTime = true;
+    return ret;
+  },
+
+  /* Serialization boilerplate */
+  constructor: Clock
 };
 
 /* Construct a clock that returns (optionally scaled) real time
  * The clock counts from zero */
-Clock.realTime = function(scale) {
+Clock.realTime = function(scale, start) {
   if (scale == null) scale = 1.0;
-  return new Clock(performance.now.bind(performance), scale * 1e-3);
+  scale *= 1e-3;
+  var offset = (start == null) ? null : start - performance.now() * scale;
+  var ret = new Clock(performance.now.bind(performance), scale, offset);
+  ret._realTime = true;
+  return ret;
+};
+
+/* Seralize a clock */
+Clock.__save__ = function(clock) {
+  if (! clock._realTime) throw new Error("Clock not serializable!");
+  return {scale: clock.scale * 1e3, time: clock.now()};
+};
+
+/* Deserialize a clock */
+Clock.__restore__ = function(clock) {
+  return Clock.realTime(clock.scale, clock.time);
 };
 
 /* Serialize an object tree to JSON, storing type information */
