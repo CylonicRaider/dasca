@@ -4,6 +4,10 @@
 
 'use strict';
 
+/* *** Clock ***
+ * An object allowing to sample "time" (as defined by an external source)
+ * with a linear transform in place. */
+
 /* Construct a new clock
  * source is a function that, when called, returns the current time; scale
  * and offset modify source's output in a linear fashion: the reading of
@@ -60,9 +64,15 @@ Clock.__save__ = function(clock) {
 };
 
 /* Deserialize a clock */
-Clock.__restore__ = function(clock) {
-  return Clock.realTime(clock.scale, clock.time);
+Clock.__restore__ = function(data) {
+  return Clock.realTime(data.scale, data.time);
 };
+
+/* *** Serialization ***
+ * Serializes object trees (!) into JSON strings, allowing reified objects to
+ * be of the correct type, to hook their (de)serialization process.
+ * Input containing enumerable function properties is rejected (since those
+ * are silently swallowed by JSON); use hooks to meaningfully handle them. */
 
 /* Serialize an object tree to JSON, storing type information */
 function serialize(obj) {
