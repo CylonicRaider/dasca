@@ -57,15 +57,132 @@ Clock.realTime = function(scale, start) {
   return ret;
 };
 
-/* Seralize a clock */
+/* Seralize a Clock */
 Clock.__save__ = function(clock) {
   if (! clock._realTime) throw new Error("Clock not serializable!");
   return {scale: clock.scale * 1e3, time: clock.now()};
 };
 
-/* Deserialize a clock */
+/* Deserialize a Clock */
 Clock.__restore__ = function(data) {
   return Clock.realTime(data.scale, data.time);
+};
+
+/* *** Scheduler ***
+ * Schedules call-backs to happen at certain times as defined by a Clock
+ * instance. */
+
+/* Construct a new scheduler
+ * requeue is a funtion that somehow ("magically") ensures the function
+ * to it is asynchronously called again some short time later; tasks is an
+ * ordered array of objects whose "time" property is used to determine when
+ * they are to run; clock is a Clock instance determining the time this
+ * instance works with. The "running" property is set to true; it can be used
+ * to stop the Scheduler. */
+function Scheduler(requeue, tasks, clock) {
+  if (tasks == null) tasks = [];
+  if (clock == null) clock = Clock.realTime();
+  this.requeue = requeue;
+  this.tasks = tasks;
+  this.clock = clock;
+  this.running = true;
+}
+
+Scheduler.prototype = {
+  /* Queue the next run of the scheduler, and perform any tasks whose time
+   * has come
+   * After obtaining a timestamp from the clock, all tasks whose time
+   * property is not less than the timestamp are removed from the queue and
+   * run using runTask(); after that, if the "running" property is true,
+   * requeue is called with a bound version of this.run as only argument to
+   * trigger another execution. */
+  run: function() {
+    /* Obtain current timestamp */
+    var now = this.clock.now();
+    /* For each task that is (over)due */
+    while (this.tasks[0] && this.tasks[0].time <= now) {
+      /* Run it */
+      this.runTask(this.tasks.shift(), now);
+    }
+    /* Schedule next iteration */
+    if (this.running) this.requeue(this.run.bind(this));
+  },
+
+  /* Run a singular task, providing the given timestamp
+   * The default implementation calls the task's "cb" (which is assumed to be
+   * a function) with the value of now and the Scheduler instance as
+   * arguments, and consumes exceptions by logging them to the console. */
+  runTask: function(task, now) {
+    try {
+      task.cb(now, this);
+    } catch (e) {
+      console.error(e);
+    }
+  },
+
+  /* Schedule a task to be run
+   * If time is not null, it is inserted into task as the "time" property;
+   * after that, the task is inserted at an appropriate position. */
+  addTask: function(task, time) {
+    if (time != null) task.time = time;
+    time = task.time;
+    var i;
+    for (i = 0; i < this.tasks.length; i++) {
+      if (this.tasks[i].time > time) break;
+    }
+    this.tasks.splice(0, i, task);
+  },
+
+  /* Cancel all tasks */
+  clear: function() {
+    this.tasks.splice(0, this.tasks.length);
+  },
+
+  /* OOP boilerplate */
+  constructor: Scheduler
+};
+
+/* Create a Scheduler for animations */
+Scheduler.makeAnimated = function(clock) {
+  var ret = new Scheduler(requestAnimationFrame, null, clock);
+  ret._type = "animated";
+  return ret;
+};
+
+/* Create a Scheduler that polls tasks at regular intervals */
+Scheduler.makeStrobe = function(fps, clock) {
+  var delay = 1000.0 / fps;
+  var ret = new Scheduler(function(cb) {
+    setTimeout(cb, delay);
+  }, null, clock);
+  ret._type = "strobe";
+  ret._fps = fps;
+  return ret;
+};
+
+/* Prepare for serializing a Scheduler */
+Scheduler.__save__ = function(sched) {
+  var ret = {type: sched._type, tasks: sched.tasks, clock: sched.clock,
+             running: sched.running};
+  if (sched._type == "strobe") {
+    ret.fps = sched._fps;
+  } else if (sched._type != "animated") {
+    throw new Error("Scheduler not serializable!");
+  }
+  return ret;
+};
+
+/* Deserialize a Scheduler */
+Scheduler.__restore__ = function(data) {
+  var ret;
+  if (data.type == "animated") {
+    ret = Scheduler.makeAnimated(data.clock);
+  } else if (data.type == "strobe") {
+    ret = Scheduler.makeStrobe(data.fps, data.clock);
+  }
+  ret.tasks = data.tasks;
+  ret.running = data.running;
+  return ret;
 };
 
 /* *** Serialization ***
