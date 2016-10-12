@@ -78,7 +78,9 @@ Clock.__restore__ = function(data) {
  * ordered array of objects whose "time" property is used to determine when
  * they are to run; clock is a Clock instance determining the time this
  * instance works with. The "running" property is set to true; it can be used
- * to stop the Scheduler. */
+ * to stop the Scheduler.
+ * To start it, ensure the "running" property is true and call the run()
+ * method. */
 function Scheduler(requeue, tasks, clock) {
   if (tasks == null) tasks = [];
   if (clock == null) clock = Clock.realTime();
@@ -97,6 +99,8 @@ Scheduler.prototype = {
    * requeue is called with a bound version of this.run as only argument to
    * trigger another execution. */
   run: function() {
+    /* Abort if not running */
+    if (! this.running) return;
     /* Obtain current timestamp */
     var now = this.clock.now();
     /* For each task that is (over)due */
@@ -105,7 +109,7 @@ Scheduler.prototype = {
       this.runTask(this.tasks.shift(), now);
     }
     /* Schedule next iteration */
-    if (this.running) this.requeue(this.run.bind(this));
+    this.requeue(this.run.bind(this));
   },
 
   /* Run a singular task, providing the given timestamp
