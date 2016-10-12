@@ -67,6 +67,9 @@ Clock.__restore__ = function(clock) {
 /* Serialize an object tree to JSON, storing type information */
 function serialize(obj) {
   return JSON.stringify(obj, function(name, value) {
+    /* Fail verbosely */
+    if (typeof value == "function")
+      throw new Error("Cannot serialize function");
     /* Only transform object values */
     if (typeof value != "object" || Array.isArray(value)) return value;
     /* Get a meaningful constructor name */
