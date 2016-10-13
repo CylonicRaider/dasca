@@ -4,8 +4,11 @@
 
 'use strict';
 
-/* A serializable (and reifiable) function wrapper, usable as a Scheduler
- * task */
+/* *** Action ***
+ * A serializable (and reifiable) function wrapper, usable as a Scheduler
+ * task. */
+
+/* Construct a new action */
 function DascaAction(name, cb) {
   if (cb == null && DascaAction.cache[name])
     cb = DascaAction.cache[name].cb;
@@ -39,3 +42,13 @@ DascaAction.__restore__ = function(data) {
   if (ret.cb == null) throw new Error("Unrecognized action!");
   return ret;
 }
+
+/* *** Initialization *** */
+
+function init() {
+  // TODO: Actual layer swapping code
+  document.getElementById("titlescreen").classList.add("selected");
+}
+
+/* Install load handler */
+window.addEventListener("load", init);
