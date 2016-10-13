@@ -156,7 +156,7 @@ Scheduler.prototype = {
 
 /* Create a Scheduler for animations */
 Scheduler.makeAnimated = function(clock) {
-  var ret = new Scheduler(requestAnimationFrame, null, clock);
+  var ret = new Scheduler(requestAnimationFrame.bind(window), null, clock);
   ret._type = "animated";
   return ret;
 };
