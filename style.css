@@ -43,3 +43,26 @@ h1 {
   border: none;
   height: 0.2em;
 }
+
+#mainscreen {
+  display: flex;
+  flex-direction: column;
+}
+
+#mainscreen .row {
+  display: flex;
+}
+#mainscreen .row-all {
+  flex-grow: 1;
+}
+#mainscreen .row-small {
+  padding: 1em;
+  height: 1em;
+}
+
+#mainscreen .col-quarter {
+  width: 25%;
+}
+#mainscreen .col-all {
+  flex-grow: 1;
+}
