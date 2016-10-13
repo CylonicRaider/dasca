@@ -224,14 +224,15 @@ function serialize(obj) {
 }
 
 /* Deserialize a JSON string into an object structure */
-function deserialize(obj) {
+function deserialize(obj, env) {
+  if (env == null) env = window;
   return JSON.parse(obj, function(name, value) {
     /* Ignore non-objects */
     if (typeof value != "object" || Array.isArray(value)) return value;
     /* Check for a __type__ */
     if (value.__type__) {
       /* Obtain type object */
-      var type = window[value.__type__];
+      var type = env[value.__type__];
       if (type && type.__restore__) {
         /* Use restorer function */
         value = type.__restore__(value);
