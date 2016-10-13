@@ -42,6 +42,14 @@ Clock.prototype = {
     return ret;
   },
 
+  /* Change the scale of the clock, ensuring that readings continue to be
+   * continuous */
+  setScale: function(scale) {
+    var samp = this.source();
+    this.offset = (this.scale - scale) * samp + this.offset;
+    this.scale = scale;
+  },
+
   /* Serialization boilerplate */
   constructor: Clock
 };
