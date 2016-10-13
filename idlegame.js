@@ -90,16 +90,19 @@ Clock.__restore__ = function(data) {
  * requeue is a funtion that somehow ("magically") ensures the function
  * to it is asynchronously called again some short time later; tasks is an
  * ordered array of objects whose "time" property is used to determine when
- * they are to run; clock is a Clock instance determining the time this
- * instance works with. The "running" property is set to true; it can be used
- * to stop the Scheduler.
+ * they are to run; contTasks is an array of tasks to be run continuously,
+ * i.e. at every call of run() (the same semantics as for tasks apply); clock
+ * is a Clock instance determining the time this instance works with. The
+ * "running" property is set to true; it can be used to stop the Scheduler.
  * To start it, ensure the "running" property is true and call the run()
  * method. */
-function Scheduler(requeue, tasks, clock) {
+function Scheduler(requeue, tasks, contTasks, clock) {
   if (tasks == null) tasks = [];
+  if (contTasks == null) contTasks = [];
   if (clock == null) clock = Clock.realTime();
   this.requeue = requeue;
   this.tasks = tasks;
+  this.contTasks = contTasks;
   this.clock = clock;
   this.running = true;
 }
@@ -121,6 +124,10 @@ Scheduler.prototype = {
     while (this.tasks[0] && this.tasks[0].time <= now) {
       /* Run it */
       this.runTask(this.tasks.shift(), now);
+    }
+    /* Run the continuous tasks */
+    for (var i = 0; i < this.contTasks.length; i++) {
+      this.runTask(this.contTasks[i], now);
     }
     /* Schedule next iteration */
     this.requeue(this.run.bind(this));
@@ -162,7 +169,8 @@ Scheduler.prototype = {
 
 /* Create a Scheduler for animations */
 Scheduler.makeAnimated = function(clock) {
-  var ret = new Scheduler(requestAnimationFrame.bind(window), null, clock);
+  var ret = new Scheduler(requestAnimationFrame.bind(window), null, null,
+                          clock);
   ret._type = "animated";
   return ret;
 };
@@ -172,7 +180,7 @@ Scheduler.makeStrobe = function(fps, clock) {
   var delay = 1000.0 / fps;
   var ret = new Scheduler(function(cb) {
     setTimeout(cb, delay);
-  }, null, clock);
+  }, null, null, clock);
   ret._type = "strobe";
   ret._fps = fps;
   return ret;
@@ -180,7 +188,8 @@ Scheduler.makeStrobe = function(fps, clock) {
 
 /* Prepare for serializing a Scheduler */
 Scheduler.__save__ = function(sched) {
-  var ret = {type: sched._type, tasks: sched.tasks, clock: sched.clock,
+  var ret = {type: sched._type, tasks: sched.tasks,
+             contTasks: sched.contTasks, clock: sched.clock,
              running: sched.running};
   if (sched._type == "strobe") {
     ret.fps = sched._fps;
@@ -199,6 +208,7 @@ Scheduler.__restore__ = function(data) {
     ret = Scheduler.makeStrobe(data.fps, data.clock);
   }
   ret.tasks = data.tasks;
+  ret.contTasks = data.contTasks;
   ret.running = data.running;
   return ret;
 };
