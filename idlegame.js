@@ -50,6 +50,11 @@ Clock.prototype = {
     this.scale = scale;
   },
 
+  /* Change the scale of the clock relatively to the current one */
+  changeScale: function(factor) {
+    this.setScale(this.scale * factor);
+  },
+
   /* Serialization boilerplate */
   constructor: Clock
 };
@@ -58,9 +63,10 @@ Clock.prototype = {
  * The clock counts from zero */
 Clock.realTime = function(scale, start) {
   if (scale == null) scale = 1.0;
-  scale *= 1e-3;
   var offset = (start == null) ? null : start - performance.now() * scale;
-  var ret = new Clock(performance.now.bind(performance), scale, offset);
+  var ret = new Clock(function() {
+    return performance.now() / 1000.0;
+  }, scale, offset);
   ret._realTime = true;
   return ret;
 };
@@ -68,7 +74,7 @@ Clock.realTime = function(scale, start) {
 /* Seralize a Clock */
 Clock.__save__ = function(clock) {
   if (! clock._realTime) throw new Error("Clock not serializable!");
-  return {scale: clock.scale * 1e3, time: clock.now()};
+  return {scale: clock.scale, time: clock.now()};
 };
 
 /* Deserialize a Clock */
