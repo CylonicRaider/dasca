@@ -83,7 +83,7 @@ Clock.__restore__ = function(data) {
 };
 
 /* *** Scheduler ***
- * Schedules call-backs to happen at certain times as defined by a Clock
+ * Schedules callbacks to happen at certain times as defined by a Clock
  * instance. */
 
 /* Construct a new scheduler
