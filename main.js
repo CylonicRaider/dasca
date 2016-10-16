@@ -43,6 +43,60 @@ DascaAction.__restore__ = function(data) {
   return ret;
 }
 
+/* *** Variables ***
+ * Each variable has a name and a (mutable) value; when the value is changed
+ * via the setter method, callbacks registered for the variable (statically)
+ * are invoked, each with "this" set to the variable, and the name, the new,
+ * and the old value as arguments.
+ * Callbacks are registered statically to aid serialization. */
+
+/* Construct a new variable */
+function Variable(name, value) {
+  this.name = name;
+  this.value = value;
+}
+
+Variable.prototype = {
+  /* Get the value of the variable */
+  get: function() {
+    return this.value;
+  },
+
+  /* Set the value of the variable
+   * If the value changes, callbacks are invoked. */
+  set: function(value) {
+    if (value === this.value) return;
+    var oldVal = this.value;
+    this.value = value;
+    var cbs = callbacks[this.name];
+    if (cbs) {
+      for (var i = 0; i < cbs.length; i++)
+        cbs[i].call(this, this.name, value, oldVal);
+    }
+  },
+
+  /* OOP noise */
+  constructor: Variable
+}
+
+/* Mapping of variable names to values */
+Variable.callbacks = {};
+
+/* Register the given callback for the given variable name */
+Variable.addCallback = function(name, cb) {
+  if (! Variable.callbacks[name])
+    Variable.callbacks[name] = [];
+  if (Variable.callbacks[name].indexOf(cb) == -1)
+    Variable.callbacks[name].push(cb);
+};
+
+/* Deregister the given callback */
+Variable.removeCallback = function(name, cb) {
+  if (! Variable.callbacks[name]) return;
+  var idx = Variable.callbacks[name].indexOf(cb);
+  if (idx != -1) Variable.callbacks[name].splice(idx, 1);
+};
+
 /* *** Initialization *** */
 
 function init() {
