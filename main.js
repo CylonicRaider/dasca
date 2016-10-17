@@ -97,11 +97,37 @@ Variable.removeCallback = function(name, cb) {
   if (idx != -1) Variable.callbacks[name].splice(idx, 1);
 };
 
+/* *** UI control *** */
+
+/* Show the given UI element, hiding any siblings and showing all its
+ * showable parents */
+function showNode(node) {
+  if (! node) return;
+  /* Resolve ID-s */
+  if (typeof node == "string") node = document.getElementById(node);
+  /* Hide siblings */
+  var prev = node.previousElementSibling, next = node.nextElementSibling;
+  while (prev) {
+    if (prev.classList.contains("selectable"))
+      prev.classList.remove("selected");
+    prev = prev.previousElementSibling;
+  }
+  while (next) {
+    if (next.classList.contains("selectable"))
+      next.classList.remove("selected");
+    next = next.nextiousElementSibling;
+  }
+  /* Show parent */
+  showNode(node.parentNode);
+  /* Show node */
+  if (node.classList && node.classList.contains("selectable"))
+    node.classList.add("selected");
+}
+
 /* *** Initialization *** */
 
 function init() {
-  // TODO: Actual layer swapping code
-  document.getElementById("titlescreen").classList.add("selected");
+  showNode("titlescreen");
 }
 
 /* Install load handler */
