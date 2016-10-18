@@ -259,7 +259,7 @@ function deserialize(obj, env) {
       var type = env[value.__type__];
       if (type && type.__restore__) {
         /* Use restorer function */
-        value = type.__restore__(value);
+        value = type.__restore__(value, env);
       } else if (type) {
         /* Assume an object is deserializable as-is */
         var newVal = Object.create(type.prototype);
