@@ -97,6 +97,52 @@ Variable.removeCallback = function(name, cb) {
   if (idx != -1) Variable.callbacks[name].splice(idx, 1);
 };
 
+/* *** Game objects *** */
+
+/* Construct a new Game
+ * state is either null (to indicate the creation of a fresh game), or a
+ * string containing a serialized GameState, which is restored. */
+function Game(state) {
+  this.context = Object.create(window);
+  if (state) {
+    this.state = deserialize(state, this.context);
+  } else {
+    this.state = new GameState();
+  }
+  this.ui = new GameUI(this);
+}
+
+Game.prototype = {
+  /* Save the game state to a string */
+  save: function() {
+    return serialize(this.state);
+  },
+
+  /* OOP hook */
+  constructor: Game
+};
+
+/* Construct a new game state
+ * For restoring a saved state, use deserialization. */
+function GameState() {
+  /**/
+}
+
+GameState.prototype = {
+  /* OOP necessity */
+  constructor: GameState
+};
+
+/* Construct a new game UI */
+function GameUI(game) {
+  this.game = game;
+}
+
+GameUI.prototype = {
+  /* OOP annoyance */
+  constructor: GameUI
+};
+
 /* *** UI control *** */
 
 /* Show the given UI element, hiding any siblings and showing all its
