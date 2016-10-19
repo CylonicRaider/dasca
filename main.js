@@ -115,7 +115,7 @@ function showNode(node) {
   while (next) {
     if (next.classList.contains("selectable"))
       next.classList.remove("selected");
-    next = next.nextiousElementSibling;
+    next = next.nextElementSibling;
   }
   /* Show parent */
   showNode(node.parentNode);
