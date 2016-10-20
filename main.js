@@ -9,11 +9,14 @@
  * task. */
 
 /* Construct a new action */
-function DascaAction(name, cb) {
-  if (cb == null && DascaAction.cache[name])
-    cb = DascaAction.cache[name].cb;
+function DascaAction(name, extra) {
   this.name = name;
-  this.cb = cb;
+  this.extra = extra;
+  if (DascaAction.handlers[name]) {
+    this.cb = DascaAction.handlers[name];
+  } else {
+    throw new Error("Unknown action " + name);
+  }
 }
 
 DascaAction.prototype = {
@@ -21,26 +24,22 @@ DascaAction.prototype = {
   constructor: DascaAction
 };
 
-/* Cache of actions
- * Although the term is not exactly correct, I couldn't think of a better
- * one. */
-DascaAction.cache = {};
+/* Collection of handlers for actions */
+DascaAction.handlers = {};
 
-/* Add an action to the cache */
-DascaAction.addAction = function(name, cb) {
-  DascaAction.cache[name] = new DascaAction(name, cb);
+/* Add a handler to the list */
+DascaAction.addHandler = function(name, cb) {
+  DascaAction.handlers[name] = cb;
 };
 
 /* Serialization hook */
 DascaAction.__save__ = function(action) {
-  return {name: action.name};
+  return {name: action.name, extra: action.extra || undefined};
 }
 
 /* Deserialization hook */
 DascaAction.__restore__ = function(data) {
-  var ret = new DascaAction(data.name);
-  if (ret.cb == null) throw new Error("Unrecognized action!");
-  return ret;
+  return new DascaAction(data.name, data.extra);
 }
 
 /* *** Variables ***
