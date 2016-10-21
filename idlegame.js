@@ -105,6 +105,7 @@ function Scheduler(requeue, tasks, contTasks, clock) {
   this.contTasks = contTasks;
   this.clock = clock;
   this.running = true;
+  this._idle = true;
 }
 
 Scheduler.prototype = {
@@ -130,7 +131,11 @@ Scheduler.prototype = {
       this.runTask(this.contTasks[i], now);
     }
     /* Schedule next iteration */
-    this.requeue(this.run.bind(this));
+    if (this.tasks.length || this.contTasks.length) {
+      this.requeue(this.run.bind(this));
+    } else {
+      this._idle = true;
+    }
   },
 
   /* Run a singular task, providing the given timestamp
@@ -156,6 +161,10 @@ Scheduler.prototype = {
       if (this.tasks[i].time > time) break;
     }
     this.tasks.splice(0, i, task);
+    if (this.running && this._idle) {
+      this._idle = false;
+      this.requeue(this.run.bind(this));
+    }
   },
 
   /* Cancel all tasks */
