@@ -170,7 +170,7 @@ Scheduler.prototype = {
     for (i = 0; i < this.tasks.length; i++) {
       if (this.tasks[i].time > time) break;
     }
-    this.tasks.splice(0, i, task);
+    this.tasks.splice(i, 0, task);
     if (this.running && this._idle) {
       this._idle = false;
       this.requeue(this.run.bind(this));
