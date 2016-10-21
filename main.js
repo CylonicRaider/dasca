@@ -4,6 +4,48 @@
 
 'use strict';
 
+/* *** Utilities *** */
+
+/* Shortcut for getElementById */
+function $id(id, ctx) {
+  return (ctx || document).getElementById(id);
+}
+
+/* Create a DOM element */
+function $make(name, className, attrs, children) {
+  /* Create node */
+  var ret = document.createElement(name);
+  /* Set classes */
+  if (className) ret.className = className;
+  /* Set additional attributes */
+  if (attrs) {
+    for (var name in attrs) {
+      if (! attrs.hasOwnProperty(name)) continue;
+      ret.setAttribute(name, attrs[name]);
+    }
+  }
+  /* Add children */
+  if (children) {
+    for (var i = 0; i < children.length; i++) {
+      var e = children[i];
+      if (typeof e == "string") {
+        /* Strings become text nodes */
+        ret.appendChild(document.createTextNode(e));
+      } else if (typeof e != "object") {
+        /* Other primitive types are not allowed */
+        throw new Error("Bad child encountered during DOM node creation");
+      } else if (Array.isArray(e)) {
+        /* Arrays are handled recursively */
+        ret.appendChild($make.apply(null, e));
+      } else {
+        /* Everything else is assumed to be a DOM node */
+        ret.appendChild(e);
+      }
+    }
+  }
+  return ret;
+}
+
 /* *** Action ***
  * A serializable (and reifiable) function wrapper, usable as a Scheduler
  * task. */
@@ -117,6 +159,11 @@ Game.prototype = {
     return serialize(this.state);
   },
 
+  /* Actually commence game here */
+  init: function() {
+    /* TODO */
+  },
+
   /* OOP hook */
   constructor: Game
 };
@@ -124,7 +171,7 @@ Game.prototype = {
 /* Construct a new game state
  * For restoring a saved state, use deserialization. */
 function GameState() {
-  /**/
+  this.scheduler = Scheduler.makeStrobe(100);
 }
 
 GameState.prototype = {
@@ -135,9 +182,22 @@ GameState.prototype = {
 /* Construct a new game UI */
 function GameUI(game) {
   this.game = game;
+  this.root = null;
 }
 
 GameUI.prototype = {
+  /* Install the game UI into the given node */
+  mount: function(node) {
+    this.root = node;
+    node.innerHTML = "";
+    node.appendChild($make("div", "row row-all", null, [
+      ["div", "col col-quarter inset", {id: "leftbar"}],
+      ["div", "col col-all inset", {id: "midbar"}],
+      ["div", "col col-quarter inset", {id: "rightbar"}]
+    ]));
+    node.appendChild($make("div", "row row-small inset", {id: "bottombar"}));
+  },
+
   /* OOP annoyance */
   constructor: GameUI
 };
@@ -149,7 +209,7 @@ GameUI.prototype = {
 function showNode(node) {
   if (! node) return;
   /* Resolve ID-s */
-  if (typeof node == "string") node = document.getElementById(node);
+  if (typeof node == "string") node = $id(node);
   /* Hide siblings */
   var prev = node.previousElementSibling, next = node.nextElementSibling;
   while (prev) {
@@ -173,6 +233,12 @@ function showNode(node) {
 
 function init() {
   showNode("titlescreen");
+  $id("start-game").addEventListener("click", function() {
+    var g = new Game();
+    g.ui.mount($id("mainscreen"));
+    showNode("mainscreen");
+    g.init();
+  });
 }
 
 /* Install load handler */
