@@ -166,10 +166,10 @@ Game.prototype = {
   init: function() {
     var sched = this.state.scheduler;
     sched.clock.setTime(0);
-    var texts = [["Darkness.", 0],
-                 ["Silence.", 2],
-                 ["Confinement.", 4],
-                 ["Amnesia.", 8]];
+    var texts = [["Darkness.", 1],
+                 ["Silence.", 3],
+                 ["Confinement.", 5],
+                 ["Amnesia.", 9]];
     texts.forEach(function(x) {
       sched.addTask(new DascaAction("showMessage", x[0]), x[1]);
     });
@@ -214,7 +214,8 @@ GameUI.prototype = {
   showMessage: function(msg) {
     var msgnode = $make("p", "log-message", {}, [msg]);
     var msgbar = $id("messagebar");
-    msgbar.insertBefore(msgnode, msgbar.firstChild);
+    msgbar.appendChild(msgnode);
+    msgbar.scrollTop = msgbar.offsetHeight;
     this.game.state.messages.push(msg);
   },
 
