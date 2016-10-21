@@ -257,7 +257,11 @@ function serialize(obj) {
       ret = value.constructor.__save__(value);
     } else {
       ret = {};
-      for (var prop in value) ret[prop] = value[prop];
+      for (var prop in value) {
+        if (typeof value[prop] == "function" && ! value.hasOwnProperty(prop))
+          continue;
+        ret[prop] = value[prop];
+      }
     }
     /* Add __type__ */
     ret.__type__ = cons;
