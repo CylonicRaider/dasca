@@ -55,6 +55,16 @@ Clock.prototype = {
     this.setScale(this.scale * factor);
   },
 
+  /* Jump to the given time */
+  setTime: function(time) {
+    this.offset = time - this.source() * this.scale;
+  },
+
+  /* Change the time reported by the clock by the given increment */
+  changeTime: function(delta) {
+    this.offset -= delta;
+  },
+
   /* Serialization boilerplate */
   constructor: Clock
 };
