@@ -4,6 +4,9 @@
 
 'use strict';
 
+/* The currently running game */
+var game = null;
+
 /* *** Utilities *** */
 
 /* Shortcut for getElementById */
@@ -161,7 +164,15 @@ Game.prototype = {
 
   /* Actually commence game here */
   init: function() {
-    /* TODO */
+    var sched = this.state.scheduler;
+    sched.clock.setTime(0);
+    var texts = [["Darkness.", 0],
+                 ["Silence.", 2],
+                 ["Confinement.", 4],
+                 ["Amnesia.", 8]];
+    texts.forEach(function(x) {
+      sched.addTask(new DascaAction("showMessage", x[0]), x[1]);
+    });
   },
 
   /* OOP hook */
@@ -172,6 +183,7 @@ Game.prototype = {
  * For restoring a saved state, use deserialization. */
 function GameState() {
   this.scheduler = Scheduler.makeStrobe(100);
+  this.messages = [];
 }
 
 GameState.prototype = {
@@ -191,16 +203,29 @@ GameUI.prototype = {
     this.root = node;
     node.innerHTML = "";
     node.appendChild($make("div", "row row-all", null, [
-      ["div", "col col-quarter inset", {id: "leftbar"}],
-      ["div", "col col-all inset", {id: "midbar"}],
-      ["div", "col col-quarter inset", {id: "rightbar"}]
+      ["div", "col col-quarter inset", {id: "messagebar"}],
+      ["div", "col col-all inset", {id: "mainbar"}],
+      ["div", "col col-quarter inset", {id: "inventbar"}]
     ]));
     node.appendChild($make("div", "row row-small inset", {id: "bottombar"}));
+  },
+
+  /* Prepend a message to the message bar */
+  showMessage: function(msg) {
+    var msgnode = $make("p", "log-message", {}, [msg]);
+    var msgbar = $id("messagebar");
+    msgbar.insertBefore(msgnode, msgbar.firstChild);
+    this.game.state.messages.push(msg);
   },
 
   /* OOP annoyance */
   constructor: GameUI
 };
+
+/* Handler handler for showing messages */
+DascaAction.addHandler("showMessage", function() {
+  game.ui.showMessage(this.extra);
+});
 
 /* *** UI control *** */
 
@@ -233,11 +258,11 @@ function showNode(node) {
 
 function init() {
   showNode("titlescreen");
-  $id("start-game").addEventListener("click", function() {
-    var g = new Game();
-    g.ui.mount($id("mainscreen"));
+  $id("startgame").addEventListener("click", function() {
+    game = new Game();
+    game.ui.mount($id("mainscreen"));
     showNode("mainscreen");
-    g.init();
+    game.init();
   });
 }
 
