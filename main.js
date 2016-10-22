@@ -26,6 +26,7 @@ function $make(name, className, attrs, children) {
   }
   /* Add children */
   if (children) {
+    if (typeof children == "string") children = [children];
     for (var i = 0; i < children.length; i++) {
       var e = children[i];
       if (typeof e == "string") {
@@ -228,7 +229,7 @@ GameUI.prototype = {
       ["div", "col col-quarter inset", {id: "inventbar"}]
     ]));
     node.appendChild($make("div", "row row-small inset", {id: "bottombar"}, [
-      ["button", "btn btn-small dim", {id: "credits-game"}, ["Credits"]]
+      ["button", "btn btn-small dim", {id: "credits-game"}, "Credits"]
     ]));
     /* Restore state */
     if (this.game.state.messages.length) {
