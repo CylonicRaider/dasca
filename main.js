@@ -204,7 +204,10 @@ GameUI.prototype = {
     node.innerHTML = "";
     node.appendChild($make("div", "row row-all", null, [
       ["div", "col col-quarter inset", {id: "messagebar"}],
-      ["div", "col col-all inset", {id: "mainbar"}],
+      ["div", "col col-all", null, [
+        ["div", "row row-small inset", {id: "tabbar"}],
+        ["div", "row row-all inset", {id: "mainpane"}]
+      ]],
       ["div", "col col-quarter inset", {id: "inventbar"}]
     ]));
     node.appendChild($make("div", "row row-small inset", {id: "bottombar"}));

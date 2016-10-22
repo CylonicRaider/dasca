@@ -13,7 +13,7 @@ body, #game {
 }
 
 #game {
-  font: 5vmin serif;
+  font: 5vmin/1.2 serif;
 }
 
 #game, #game .layer {
@@ -103,7 +103,12 @@ h1 {
   flex-grow: 1;
 }
 #mainscreen .row-small {
-  height: 2em;
+  height: 1.2em;
+  font-size: 0.75em;
+}
+#mainscreen .col {
+  display: flex;
+  flex-direction: column;
 }
 #mainscreen .col-quarter {
   width: 25%;
@@ -129,4 +134,8 @@ h1 {
 @keyframes dasca-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+.hidden {
+  display: none;
 }
