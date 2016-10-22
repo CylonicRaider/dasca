@@ -177,6 +177,11 @@ Scheduler.prototype = {
     }
   },
 
+  /* Schedule a task to be run after delta units of time */
+  addTaskIn: function(task, delta) {
+    this.addTask(task, this.clock.now() + delta);
+  },
+
   /* Cancel all tasks */
   clear: function() {
     this.tasks.splice(0, this.tasks.length);
