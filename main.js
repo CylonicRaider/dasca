@@ -201,6 +201,7 @@ GameUI.prototype = {
   /* Install the game UI into the given node */
   mount: function(node) {
     this.root = node;
+    /* Create basic node structure */
     node.innerHTML = "";
     node.appendChild($make("div", "row row-all", null, [
       ["div", "col col-quarter inset", {id: "messagebar"}],
@@ -211,14 +212,26 @@ GameUI.prototype = {
       ["div", "col col-quarter inset", {id: "inventbar"}]
     ]));
     node.appendChild($make("div", "row row-small inset", {id: "bottombar"}));
+    /* Restore state */
+    if (this.game.state.messages.length) {
+      var m = this.game.state.messages;
+      for (var i = 0; i < m.length; i++)
+        this._showMessage(messages[i], true);
+    }
   },
 
-  /* Prepend a message to the message bar */
-  showMessage: function(msg) {
+  /* Append a message to the message bar without updating the game state
+   * Used internally. */
+  _showMessage: function(msg) {
     var msgnode = $make("p", "log-message", {}, [msg]);
     var msgbar = $id("messagebar");
     msgbar.appendChild(msgnode);
     msgbar.scrollTop = msgbar.offsetHeight;
+  },
+
+  /* Append a message to the message bar */
+  showMessage: function(msg) {
+    this._showMessage(msg);
     this.game.state.messages.push(msg);
   },
 
