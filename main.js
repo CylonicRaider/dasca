@@ -160,6 +160,7 @@ function Game(state) {
   }
   this.ui = new GameUI(this);
   this.running = true;
+  this.paused = false;
 }
 
 Game.prototype = {
@@ -184,12 +185,16 @@ Game.prototype = {
 
   /* Pause the game */
   pause: function() {
+    this.paused = true;
     this.state.scheduler.clock.setScale(0);
+    this.ui._updatePause();
   },
 
   /* Unpause the game */
   unpause: function() {
+    this.paused = false;
     this.state.scheduler.clock.setScale(1);
+    this.ui._updatePause();
   },
 
   /* OOP hook */
@@ -220,7 +225,7 @@ GameUI.prototype = {
     this.root = node;
     /* Create basic node structure */
     node.innerHTML = "";
-    node.appendChild($make("div", "row row-all", null, [
+    node.appendChild($make("div", "row row-all", {id: "gamepane"}, [
       ["div", "col col-quarter inset", {id: "messagebar"}],
       ["div", "col col-all", null, [
         ["div", "row row-small inset", {id: "tabbar"}],
@@ -229,7 +234,9 @@ GameUI.prototype = {
       ["div", "col col-quarter inset", {id: "inventbar"}]
     ]));
     node.appendChild($make("div", "row row-small inset", {id: "bottombar"}, [
-      ["button", "btn btn-small dim", {id: "credits-game"}, "Credits"]
+      ["button", "btn btn-small dim", {id: "credits-game"}, "Credits"],
+      ["div", "col-all"],
+      ["button", "btn btn-small", {id: "pause-game"}, "Pause"]
     ]));
     /* Restore state */
     if (this.game.state.messages.length) {
@@ -242,6 +249,22 @@ GameUI.prototype = {
       showNode("creditscreen");
       this.game.pause();
     }.bind(this));
+    $id("pause-game").addEventListener("click", function() {
+      if (this.game.paused) {
+        this.game.unpause();
+      } else {
+        this.game.pause();
+      }
+    }.bind(this));
+  },
+
+  /* Adapt the UI to the current pause state of the game */
+  _updatePause: function() {
+    if (this.game.paused) {
+      $id("pause-game").textContent = "Unpause";
+    } else {
+      $id("pause-game").textContent = "Pause";
+    }
   },
 
   /* Append a message to the message bar without updating the game state
