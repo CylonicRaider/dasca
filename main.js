@@ -11,6 +11,11 @@ function $id(id, ctx) {
   return (ctx || document).getElementById(id);
 }
 
+/* Shortcut for querySelector */
+function $sel(sel, ctx) {
+  return (ctx || document).querySelector(sel);
+}
+
 /* Create a DOM element */
 function $make(name, className, attrs, children) {
   /* Create node */
@@ -173,14 +178,15 @@ Game.prototype = {
   init: function() {
     var sched = this.state.scheduler;
     sched.clock.setTime(0);
-    var texts = [["Darkness.", 1],
-                 ["Silence.", 3],
-                 ["Confinement.", 5],
-                 ["Amnesia.", 9]];
+    var texts = [[["i", null, null, "Darkness."], 1],
+                 [["i", null, null, "Silence."], 3],
+                 [["i", null, null, "Confinement."], 5],
+                 [["i", null, null, "Amnesia."], 8]];
     texts.forEach(function(x) {
       sched.addTask(new DascaAction("showMessage", x[0], this.context),
                     x[1]);
     }, this);
+    sched.addTask(new DascaAction("showTab", "starttab", this.context), 10);
   },
 
   /* Pause the game */
@@ -206,6 +212,8 @@ Game.prototype = {
 function GameState() {
   this.scheduler = Scheduler.makeStrobe(100);
   this.messages = [];
+  this.currentTab = null;
+  this.lighterVisible = false;
 }
 
 GameState.prototype = {
@@ -226,10 +234,27 @@ GameUI.prototype = {
     /* Create basic node structure */
     node.innerHTML = "";
     node.appendChild($make("div", "row row-all", {id: "gamepane"}, [
-      ["div", "col col-quarter inset", {id: "messagebar"}],
+      ["div", "col col-quarter inset", null, [
+        ["div", null, {id: "messagebar"}]
+      ]],
       ["div", "col col-all", null, [
         ["div", "row row-small inset", {id: "tabbar"}],
-        ["div", "row row-all inset", {id: "mainpane"}]
+        ["div", "row row-all inset", null, [
+          ["div", "col-all pane", {id: "mainpane"}, [
+            ["div", "selectable layer", {id: "starttab"}, [
+              ["button", "btn", {id: "btn-pockets"},
+                "Check pockets"],
+              ["div", "item-card hidable hidden", {id: "card-lighter"}, [
+                ["strong", "item-name", null, "Lighter"],
+                ["button", "btn btn-small item-use", {id: "use-lighter"},
+                  "Ignite"],
+                ["div", "item-bar", null, [
+                  ["div", "item-bar-content", {style: "width: 80%"}]
+                ]]
+              ]]
+            ]]
+          ]]
+        ]]
       ]],
       ["div", "col col-quarter inset", {id: "inventbar"}]
     ]));
@@ -244,6 +269,10 @@ GameUI.prototype = {
       for (var i = 0; i < m.length; i++)
         this._showMessage(messages[i], true);
     }
+    if (this.game.state.lighterVisible) {
+      $id("btn-pockets").classList.add("hidden");
+      $id("card-lighter").classList.remove("hidden");
+    }
     /* Install button handlers */
     $id("credits-game").addEventListener("click", function() {
       showNode("creditscreen");
@@ -255,6 +284,17 @@ GameUI.prototype = {
       } else {
         this.game.pause();
       }
+    }.bind(this));
+    $id("btn-pockets").addEventListener("click", function() {
+      this.showMessage("You find a lighter.");
+      $id("btn-pockets").classList.add("hidden");
+      $id("card-lighter").classList.remove("hidden");
+      this.game.state.lighterVisible = true;
+    }.bind(this));
+    $id("use-lighter").addEventListener("click", function() {
+      this.showMessage("The flame looks funny... Oh, right.");
+      this.showMessage(["em", null, null, "Lack of gravity."]);
+      this.showMessage("\u2014 NYI after this point :( \u2014");
     }.bind(this));
   },
 
@@ -273,7 +313,7 @@ GameUI.prototype = {
     var msgnode = $make("p", "log-message", null, [msg]);
     var msgbar = $id("messagebar");
     msgbar.appendChild(msgnode);
-    msgbar.scrollTop = msgbar.offsetHeight;
+    msgbar.scrollTop = msgbar.scrollHeight;
   },
 
   /* Append a message to the message bar */
@@ -282,13 +322,28 @@ GameUI.prototype = {
     this.game.state.messages.push(msg);
   },
 
+  /* Show the given main area tab */
+  showTab: function(tabname) {
+    if (tabname) {
+      showNode(tabname);
+    } else {
+      hideNodes("mainpane");
+    }
+    this.game.state.currentTab = tabname;
+  },
+
   /* OOP annoyance */
   constructor: GameUI
 };
 
-/* Handler handler for showing messages */
+/* Handler for showing messages */
 DascaAction.addHandler("showMessage", function() {
   this.context.game.ui.showMessage(this.extra);
+});
+
+/* Handler for showing tabs */
+DascaAction.addHandler("showTab", function() {
+  this.context.game.ui.showTab(this.extra);
 });
 
 /* *** UI control *** */
@@ -316,6 +371,19 @@ function showNode(node) {
   /* Show node */
   if (node.classList && node.classList.contains("selectable"))
     node.classList.add("selected");
+}
+
+/* Hide all selectable children of node
+ * Approximate opposite of showNode. */
+function hideNodes(node) {
+  if (! node) return;
+  /* Resolve ID-s */
+  if (typeof node == "string") node = $id("node");
+  /* Hide children */
+  for (var ch = node.firstElementChild; ch; ch = ch.nextElementSibling) {
+    if (ch.classList.contains("selectable"))
+      ch.classList.remove("selected");
+  }
 }
 
 /* *** Initialization *** */
