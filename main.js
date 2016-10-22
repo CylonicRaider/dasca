@@ -261,7 +261,7 @@ GameUI.prototype = {
   /* Adapt the UI to the current pause state of the game */
   _updatePause: function() {
     if (this.game.paused) {
-      $id("pause-game").textContent = "Unpause";
+      $id("pause-game").textContent = "Resume";
     } else {
       $id("pause-game").textContent = "Pause";
     }
