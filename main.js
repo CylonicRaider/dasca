@@ -4,9 +4,6 @@
 
 'use strict';
 
-/* The currently running game */
-var game = null;
-
 /* *** Utilities *** */
 
 /* Shortcut for getElementById */
@@ -53,10 +50,16 @@ function $make(name, className, attrs, children) {
  * A serializable (and reifiable) function wrapper, usable as a Scheduler
  * task. */
 
-/* Construct a new action */
-function DascaAction(name, extra) {
+/* Construct a new action
+ * name idenfities what to perform, extra may be used to pass additional data
+ * to the action, context contains further additional data.
+ * While extra is serialized, context is not; thus, name and extra should
+ * completely idenfity the action, and context should contain references to
+ * objects which are otherwise unattainable. */
+function DascaAction(name, extra, context) {
   this.name = name;
   this.extra = extra;
+  this.context = context;
   if (DascaAction.handlers[name]) {
     this.cb = DascaAction.handlers[name];
   } else {
@@ -83,8 +86,8 @@ DascaAction.__save__ = function(action) {
 }
 
 /* Deserialization hook */
-DascaAction.__restore__ = function(data) {
-  return new DascaAction(data.name, data.extra);
+DascaAction.__restore__ = function(data, context) {
+  return new DascaAction(data.name, data.extra, context);
 }
 
 /* *** Variables ***
@@ -148,6 +151,7 @@ Variable.removeCallback = function(name, cb) {
  * string containing a serialized GameState, which is restored. */
 function Game(state) {
   this.context = Object.create(window);
+  this.context.game = this;
   if (state) {
     this.state = deserialize(state, this.context);
   } else {
@@ -171,8 +175,9 @@ Game.prototype = {
                  ["Confinement.", 5],
                  ["Amnesia.", 9]];
     texts.forEach(function(x) {
-      sched.addTask(new DascaAction("showMessage", x[0]), x[1]);
-    });
+      sched.addTask(new DascaAction("showMessage", x[0], this.context),
+                    x[1]);
+    }, this);
   },
 
   /* OOP hook */
@@ -241,7 +246,7 @@ GameUI.prototype = {
 
 /* Handler handler for showing messages */
 DascaAction.addHandler("showMessage", function() {
-  game.ui.showMessage(this.extra);
+  this.context.game.ui.showMessage(this.extra);
 });
 
 /* *** UI control *** */
