@@ -60,8 +60,8 @@ h1 {
 }
 
 .btn {
-  border: 0;
-  padding: 0.25em;
+  border: 1px solid #808080;
+  margin: 0.25em;
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -78,7 +78,7 @@ h1 {
 }
 .btn:active, .btn:focus {
   outline: 1px dotted #808080;
-  outline-offset: -0.25em;
+  outline-offset: -0.125em;
 }
 .btn:active {
   outline-color: #c0c0c0;
@@ -88,6 +88,7 @@ h1 {
   width: 100%;
 }
 .btn-small {
+  border: 0;
   padding: 0;
 }
 .btn-small:active, .btn-small:focus {
