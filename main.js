@@ -270,7 +270,7 @@ GameUI.prototype = {
   /* Append a message to the message bar without updating the game state
    * Used internally. */
   _showMessage: function(msg) {
-    var msgnode = $make("p", "log-message", {}, [msg]);
+    var msgnode = $make("p", "log-message", null, [msg]);
     var msgbar = $id("messagebar");
     msgbar.appendChild(msgnode);
     msgbar.scrollTop = msgbar.offsetHeight;
