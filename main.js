@@ -158,6 +158,7 @@ function Game(state) {
     this.state = new GameState();
   }
   this.ui = new GameUI(this);
+  this.running = true;
 }
 
 Game.prototype = {
@@ -178,6 +179,16 @@ Game.prototype = {
       sched.addTask(new DascaAction("showMessage", x[0], this.context),
                     x[1]);
     }, this);
+  },
+
+  /* Pause the game */
+  pause: function() {
+    this.state.scheduler.clock.setScale(0);
+  },
+
+  /* Unpause the game */
+  unpause: function() {
+    this.state.scheduler.clock.setScale(1);
   },
 
   /* OOP hook */
@@ -216,13 +227,20 @@ GameUI.prototype = {
       ]],
       ["div", "col col-quarter inset", {id: "inventbar"}]
     ]));
-    node.appendChild($make("div", "row row-small inset", {id: "bottombar"}));
+    node.appendChild($make("div", "row row-small inset", {id: "bottombar"}, [
+      ["button", "btn btn-small dim", {id: "credits-game"}, ["Credits"]]
+    ]));
     /* Restore state */
     if (this.game.state.messages.length) {
       var m = this.game.state.messages;
       for (var i = 0; i < m.length; i++)
         this._showMessage(messages[i], true);
     }
+    /* Install button handlers */
+    $id("credits-game").addEventListener("click", function() {
+      showNode("creditscreen");
+      this.game.pause();
+    }.bind(this));
   },
 
   /* Append a message to the message bar without updating the game state
@@ -279,12 +297,25 @@ function showNode(node) {
 /* *** Initialization *** */
 
 function init() {
+  var game;
   showNode("titlescreen");
   $id("startgame").addEventListener("click", function() {
     game = new Game();
     game.ui.mount($id("mainscreen"));
     showNode("mainscreen");
     game.init();
+  });
+  $id("credits-title").addEventListener("click", function() {
+    showNode("creditscreen");
+    if (game) game.pause();
+  });
+  $id("back-credits").addEventListener("click", function() {
+    if (game && game.running) {
+      if (game) game.unpause();
+      showNode("mainscreen");
+    } else {
+      showNode("titlescreen");
+    }
   });
 }
 
