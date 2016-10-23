@@ -4,6 +4,8 @@
 
 'use strict';
 
+var _game;
+
 /* *** Utilities *** */
 
 /* Shortcut for getElementById */
@@ -393,6 +395,7 @@ function init() {
   showNode("titlescreen");
   $id("startgame").addEventListener("click", function() {
     game = new Game();
+    _game = game;
     game.ui.mount($id("mainscreen"));
     showNode("mainscreen");
     game.init();
