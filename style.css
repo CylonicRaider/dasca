@@ -82,7 +82,7 @@ h1 {
 }
 .btn:active, .btn:focus {
   outline: 1px dotted #808080;
-  outline-offset: -0.125em;
+  outline-offset: -3px;
 }
 .btn:active {
   outline-color: #c0c0c0;
@@ -96,7 +96,7 @@ h1 {
   border: 0;
 }
 .btn-small:active, .btn-small:focus {
-  outline-offset: 0;
+  outline-offset: -1px;
 }
 
 #mainscreen {
