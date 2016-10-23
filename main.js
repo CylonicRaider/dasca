@@ -214,6 +214,7 @@ Game.prototype = {
 function GameState() {
   this.scheduler = Scheduler.makeStrobe(100);
   this.messages = [];
+  this.messagesShown = {};
   this.currentTab = null;
   this.lighterVisible = false;
 }
@@ -294,9 +295,16 @@ GameUI.prototype = {
       this.game.state.lighterVisible = true;
     }.bind(this));
     $id("use-lighter").addEventListener("click", function() {
-      this.showMessage("The flame looks funny... Oh, right.");
-      this.showMessage(["em", null, null, "Lack of gravity."]);
-      this.showMessage("\u2014 NYI after this point :( \u2014");
+      if (! this.game.state.messagesShown.intro_flame) {
+        this.showMessageOnce("The flame looks funny... Oh, right.",
+                             "intro_flame");
+        this.showMessageOnce(["i", null, null, "Lack of gravity."],
+                             "intro_gravity");
+        this.showMessageOnce("\u2014 NYI after this point :( \u2014",
+                             "intro-nyi");
+      } else {
+        this.showMessage("The flame is blue and spherical.");
+      }
     }.bind(this));
   },
 
@@ -322,6 +330,13 @@ GameUI.prototype = {
   showMessage: function(msg) {
     this._showMessage(msg);
     this.game.state.messages.push(msg);
+  },
+
+  /* Show a message only the first time the given eky is passed */
+  showMessageOnce: function(msg, key) {
+    if (this.game.state.messagesShown[key] || ! key) return;
+    this.game.state.messagesShown[key] = true;
+    this.showMessage(msg);
   },
 
   /* Show the given main area tab */
