@@ -251,6 +251,7 @@ function serialize(obj) {
       throw new Error("Cannot serialize function");
     /* Only transform object values */
     if (typeof value != "object" || Array.isArray(value)) return value;
+    if (value === null) return null;
     /* Get a meaningful constructor name */
     var cons = value.constructor.__sername__;
     if (! cons) cons = value.constructor.name;
