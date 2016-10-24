@@ -217,6 +217,7 @@ function GameState() {
   this.messagesShown = {};
   this.currentTab = null;
   this.lighterVisible = false;
+  this.lighterBurning = false;
 }
 
 GameState.prototype = {
@@ -233,6 +234,13 @@ function GameUI(game) {
 GameUI.prototype = {
   /* Install the game UI into the given node */
   mount: function(node) {
+    var updateLighterText = function() {
+      if (this.game.state.lighterBurning) {
+        $id("use-lighter").textContent = "Extinguish";
+      } else {
+        $id("use-lighter").textContent = "Ignite";
+      }
+    }.bind(this);
     this.root = node;
     /* Create basic node structure */
     node.innerHTML = "";
@@ -295,16 +303,22 @@ GameUI.prototype = {
       this.game.state.lighterVisible = true;
     }.bind(this));
     $id("use-lighter").addEventListener("click", function() {
-      if (! this.game.state.messagesShown.intro_flame) {
+      if (this.game.state.lighterBurning) {
+        this.showMessage("It is dark again.");
+        this.game.state.lighterBurning = false;
+      } else if (! this.game.state.messagesShown.intro_flame) {
         this.showMessageOnce("The flame looks funny... Oh, right.",
                              "intro_flame");
         this.showMessageOnce(["i", null, null, "Lack of gravity."],
                              "intro_gravity");
         this.showMessageOnce("\u2014 NYI after this point :( \u2014",
                              "intro-nyi");
+        this.game.state.lighterBurning = true;
       } else {
         this.showMessage("The flame is blue and spherical.");
+        this.game.state.lighterBurning = true;
       }
+      updateLighterText();
     }.bind(this));
   },
 
