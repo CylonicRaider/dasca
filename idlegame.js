@@ -266,6 +266,8 @@ function serialize(obj) {
       for (var prop in value) {
         if (typeof value[prop] == "function" && ! value.hasOwnProperty(prop))
           continue;
+        if (/^_/.test(prop))
+          continue;
         ret[prop] = value[prop];
       }
     }
