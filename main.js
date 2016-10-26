@@ -440,7 +440,7 @@ function init() {
   });
   $id("back-credits").addEventListener("click", function() {
     if (game && game.running) {
-      if (game) game.unpause();
+      game.unpause();
       showNode("mainscreen");
     } else {
       showNode("titlescreen");
