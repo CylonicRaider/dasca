@@ -4,8 +4,6 @@
 
 'use strict';
 
-var _game;
-
 /* *** Utilities *** */
 
 /* Shortcut for getElementById */
@@ -417,6 +415,13 @@ function hideNodes(node) {
   }
 }
 
+/* *** Static interface *** */
+
+var Dasca = {
+  /* The game last run, or null */
+  game: null
+};
+
 /* *** Initialization *** */
 
 function init() {
@@ -424,7 +429,7 @@ function init() {
   showNode("titlescreen");
   $id("startgame").addEventListener("click", function() {
     game = new Game();
-    _game = game;
+    Dasca.game = game;
     game.ui.mount($id("mainscreen"));
     showNode("mainscreen");
     game.init();
