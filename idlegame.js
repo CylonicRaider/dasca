@@ -66,7 +66,18 @@ Clock.prototype = {
   },
 
   /* Serialization boilerplate */
-  constructor: Clock
+  constructor: Clock,
+
+  /* Seralize */
+  __save__: function(clock) {
+    if (! clock._realTime) throw new Error("Clock not serializable!");
+    return {scale: clock.scale, time: clock.now()};
+  },
+
+  /* Deserialize */
+  __restore__: function(data) {
+    return Clock.realTime(data.scale, data.time);
+  }
 };
 
 /* Construct a clock that returns (optionally scaled) real time
@@ -79,17 +90,6 @@ Clock.realTime = function(scale, start) {
   }, scale, offset);
   ret._realTime = true;
   return ret;
-};
-
-/* Seralize a Clock */
-Clock.__save__ = function(clock) {
-  if (! clock._realTime) throw new Error("Clock not serializable!");
-  return {scale: clock.scale, time: clock.now()};
-};
-
-/* Deserialize a Clock */
-Clock.__restore__ = function(data) {
-  return Clock.realTime(data.scale, data.time);
 };
 
 /* *** Scheduler ***
@@ -188,7 +188,34 @@ Scheduler.prototype = {
   },
 
   /* OOP boilerplate */
-  constructor: Scheduler
+  constructor: Scheduler,
+
+  /* Prepare for serializing a Scheduler */
+  __save__: function(sched) {
+    var ret = {type: sched._type, tasks: sched.tasks,
+               contTasks: sched.contTasks, clock: sched.clock,
+               running: sched.running};
+    if (sched._type == "strobe") {
+      ret.fps = sched._fps;
+    } else if (sched._type != "animated") {
+      throw new Error("Scheduler not serializable!");
+    }
+    return ret;
+  },
+
+  /* Deserialize a Scheduler */
+  __restore__: function(data) {
+    var ret;
+    if (data.type == "animated") {
+      ret = Scheduler.makeAnimated(data.clock);
+    } else if (data.type == "strobe") {
+      ret = Scheduler.makeStrobe(data.fps, data.clock);
+    }
+    ret.tasks = data.tasks;
+    ret.contTasks = data.contTasks;
+    ret.running = data.running;
+    return ret;
+  }
 };
 
 /* Create a Scheduler for animations */
@@ -210,38 +237,13 @@ Scheduler.makeStrobe = function(fps, clock) {
   return ret;
 };
 
-/* Prepare for serializing a Scheduler */
-Scheduler.__save__ = function(sched) {
-  var ret = {type: sched._type, tasks: sched.tasks,
-             contTasks: sched.contTasks, clock: sched.clock,
-             running: sched.running};
-  if (sched._type == "strobe") {
-    ret.fps = sched._fps;
-  } else if (sched._type != "animated") {
-    throw new Error("Scheduler not serializable!");
-  }
-  return ret;
-};
-
-/* Deserialize a Scheduler */
-Scheduler.__restore__ = function(data) {
-  var ret;
-  if (data.type == "animated") {
-    ret = Scheduler.makeAnimated(data.clock);
-  } else if (data.type == "strobe") {
-    ret = Scheduler.makeStrobe(data.fps, data.clock);
-  }
-  ret.tasks = data.tasks;
-  ret.contTasks = data.contTasks;
-  ret.running = data.running;
-  return ret;
-};
-
 /* *** Serialization ***
  * Serializes object trees (!) into JSON strings, allowing reified objects to
- * be of the correct type, to hook their (de)serialization process.
+ * be of the correct type, and to hook their (de)serialization process.
  * Input containing enumerable function properties is rejected (since those
- * are silently swallowed by JSON); use hooks to meaningfully handle them. */
+ * are silently swallowed by JSON); use hooks to meaningfully handle them.
+ * When hooks are not used, properties whose names start with underscores (in
+ * particular the special properties) are removed. */
 
 /* Serialize an object tree to JSON, storing type information */
 function serialize(obj) {
@@ -253,14 +255,14 @@ function serialize(obj) {
     if (typeof value != "object" || Array.isArray(value)) return value;
     if (value === null) return null;
     /* Get a meaningful constructor name */
-    var cons = value.constructor.__sername__;
+    var cons = value.__sername__;
     if (! cons) cons = value.constructor.name;
     if (! cons) cons = Object.prototype.toString(value).slice(8, -1);
     if (cons == "Object") cons = undefined;
     /* Copy properties into new object, or let object serialize itself */
     var ret;
-    if (value.constructor.__save__) {
-      ret = value.constructor.__save__(value);
+    if (value.__save__) {
+      ret = value.__save__(value);
     } else {
       ret = {};
       for (var prop in value) {

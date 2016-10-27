@@ -75,7 +75,17 @@ function DascaAction(name, extra, context) {
 
 DascaAction.prototype = {
   /* OOP helper */
-  constructor: DascaAction
+  constructor: DascaAction,
+
+  /* Serialization hook */
+  __save__: function(action) {
+    return {name: action.name, extra: action.extra || undefined};
+  },
+
+  /* Deserialization hook */
+  __restore__: function(data, context) {
+    return new DascaAction(data.name, data.extra, context);
+  }
 };
 
 /* Collection of handlers for actions */
@@ -85,16 +95,6 @@ DascaAction.handlers = {};
 DascaAction.addHandler = function(name, cb) {
   DascaAction.handlers[name] = cb;
 };
-
-/* Serialization hook */
-DascaAction.__save__ = function(action) {
-  return {name: action.name, extra: action.extra || undefined};
-}
-
-/* Deserialization hook */
-DascaAction.__restore__ = function(data, context) {
-  return new DascaAction(data.name, data.extra, context);
-}
 
 /* *** Variables ***
  * Each variable has a name and a (mutable) value; when the value is changed
