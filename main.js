@@ -365,6 +365,69 @@ GameUI.prototype = {
   constructor: GameUI
 };
 
+/* An item encapsulates an object's state and behavior
+ * To avoid the writing burden of JavaScript's OOP, item types are
+ * implemented as their prototypes only, with special hook methods for
+ * important actions. */
+function Item(type, data, game) {
+  if (Item[type] && ! (this instanceof Item[type]))
+    return new Item[type](type, data, game);
+  this.type = type;
+  this.data = data;
+  this._game = game;
+  if (this.__init__) this.__init__(true);
+}
+
+Item.prototype = {
+  /* OOP shenanigans */
+  consutructor: Item,
+
+  /* Seralize an Item */
+  __save__: function(item) {
+    return {type: item.type, data: item.data};
+  },
+
+  /* Deserialize an Item */
+  __restore__: function(item, context) {
+    var tp = Item[item.type] || Item;
+    var ret = Object.create(tp.prototype);
+    ret.type = item.type;
+    ret.data = item.data;
+    ret._game = context.game;
+    if (ret.__init__) ret.__init__(false);
+    return ret;
+  }
+};
+
+/* Define a new item type
+ * name specifies the name of the item class; proto is a property object.
+ * All item classes created using this are attributes of Item; name does not
+ * include that prefix. The prototype is derived from Item and all enumerable
+ * properties of props are copied into it; the __sername__ property is set
+ * to allow the deserializer to find the object. The constructor function
+ * created is returned. */
+Item.defineType = function(name, props) {
+  /* Create constructor function
+   * Justification: There seems not to be any method actually supported by
+   *                reasonably recent browsers to do that but manual
+   *                construction. */
+  var func = eval(
+    "(function " + name + "(data, game) {\n" +
+    "  Item.call(this, name, data, game);\n" +
+    "})");
+  /* Create prototype */
+  func.prototype = Object.create(Item.prototype);
+  /* Copy properties */
+  for (var k in props) func.prototype[k] = props[k];
+  /* Add special ones */
+  func.prototype.constructor = func;
+  func.prototype.__sername__ = "Item";
+  /* Install into Item */
+  Item[name] = func;
+  /* Return constructor */
+  return func;
+};
+
 /* Handler for showing messages */
 DascaAction.addHandler("showMessage", function() {
   this.context.game.ui.showMessage(this.extra);
