@@ -183,10 +183,9 @@ Game.prototype = {
                  [["i", null, null, "Confinement."], 5],
                  [["i", null, null, "Amnesia."], 8]];
     texts.forEach(function(x) {
-      sched.addTask(new DascaAction("showMessage", x[0], this.context),
-                    x[1]);
+      this.addTask("showMessage", x[0], x[1]);
     }, this);
-    sched.addTask(new DascaAction("showTab", "starttab", this.context), 10);
+    this.addTask("showTab", "starttab", 10);
   },
 
   /* Pause the game */
@@ -201,6 +200,16 @@ Game.prototype = {
     this.paused = false;
     this.state.scheduler.clock.setScale(1);
     this.ui._updatePause();
+  },
+
+  /* Create a DascaAction with this game's context as the context */
+  makeTask: function(name, extra) {
+    return new DascaAction(name, extra, this.context);
+  },
+
+  /* Schedule a DascaAction as created by makeTask to be run at time */
+  addTask: function(name, extra, time) {
+    this.state.scheduler.addTask(this.makeTask(name, extra), time);
   },
 
   /* OOP hook */
