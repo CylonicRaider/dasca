@@ -66,6 +66,7 @@ h1 {
 .btn {
   border: 1px solid #808080;
   margin: 0.25em;
+  padding: 3px;
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -94,6 +95,7 @@ h1 {
 .btn-small {
   margin: 0;
   border: 0;
+  padding: 0;
 }
 .btn-small:active, .btn-small:focus {
   outline-offset: -1px;
