@@ -36,6 +36,7 @@ body, #game {
   opacity: 1;
   transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
               visibility 100ms step-start;
+  z-index: 1000;
 }
 
 .pane {
@@ -136,6 +137,13 @@ h1 {
 }
 #mainscreen .inset {
   padding: 0.5em;
+}
+#mainscreen .row > hr {
+  margin: 0 0.25em;
+  border: 0;
+  padding: 0;
+  width: 1px;
+  background: white;
 }
 
 #messagebar {

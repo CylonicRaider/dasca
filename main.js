@@ -212,6 +212,12 @@ Game.prototype = {
     this.state.scheduler.addTask(this.makeTask(name, extra), time);
   },
 
+  exit: function() {
+    this.running = false;
+    this.state.scheduler.clock.setScale(0);
+    showNode("titlescreen");
+  },
+
   /* OOP hook */
   constructor: Game
 };
@@ -263,7 +269,9 @@ GameUI.prototype = {
     node.appendChild($make("div", "row row-small inset", {id: "bottombar"}, [
       ["button", "btn btn-small dim", {id: "credits-game"}, "Credits"],
       ["div", "col-all"],
-      ["button", "btn btn-small", {id: "pause-game"}, "Pause"]
+      ["button", "btn btn-small", {id: "pause-game"}, "Pause"],
+      ["hr"],
+      ["button", "btn btn-small", {id: "exit-game"}, "Exit"]
     ]));
     /* Restore state */
     if (this.game.state.messages.length) {
@@ -290,6 +298,9 @@ GameUI.prototype = {
       } else {
         this.game.pause();
       }
+    }.bind(this));
+    $id("exit-game").addEventListener("click", function() {
+      this.game.exit();
     }.bind(this));
     $id("btn-pockets").addEventListener("click", function() {
       this.showMessage("You find a lighter.");
