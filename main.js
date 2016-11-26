@@ -223,8 +223,7 @@ function GameState() {
   this.messages = [];
   this.messagesShown = {};
   this.currentTab = null;
-  this.lighterVisible = false;
-  this.lighterBurning = false;
+  this.items = {};
 }
 
 GameState.prototype = {
@@ -241,13 +240,6 @@ function GameUI(game) {
 GameUI.prototype = {
   /* Install the game UI into the given node */
   mount: function(node) {
-    var updateLighterText = function() {
-      if (this.game.state.lighterBurning) {
-        $id("use-lighter").textContent = "Extinguish";
-      } else {
-        $id("use-lighter").textContent = "Ignite";
-      }
-    }.bind(this);
     this.root = node;
     /* Create basic node structure */
     node.innerHTML = "";
@@ -261,15 +253,7 @@ GameUI.prototype = {
           ["div", "col-all pane", {id: "mainpane"}, [
             ["div", "selectable layer", {id: "starttab"}, [
               ["button", "btn", {id: "btn-pockets"},
-                "Check pockets"],
-              ["div", "item-card hidable hidden", {id: "card-lighter"}, [
-                ["strong", "item-name", null, "Lighter"],
-                ["button", "btn btn-small item-use", {id: "use-lighter"},
-                  "Ignite"],
-                ["div", "item-bar", null, [
-                  ["div", "item-bar-content", {style: "width: 80%"}]
-                ]]
-              ]]
+                "Check pockets"]
             ]]
           ]]
         ]]
@@ -287,9 +271,13 @@ GameUI.prototype = {
       for (var i = 0; i < m.length; i++)
         this._showMessage(messages[i], true);
     }
-    if (this.game.state.lighterVisible) {
+    var items = this.game.state.items;
+    if (items.lighter) {
       $id("btn-pockets").classList.add("hidden");
-      $id("card-lighter").classList.remove("hidden");
+    }
+    for (var k in items) {
+      if (! items.hasOwnProperty(k)) continue;
+      this._update(items[k]);
     }
     /* Install button handlers */
     $id("credits-game").addEventListener("click", function() {
@@ -306,26 +294,9 @@ GameUI.prototype = {
     $id("btn-pockets").addEventListener("click", function() {
       this.showMessage("You find a lighter.");
       $id("btn-pockets").classList.add("hidden");
-      $id("card-lighter").classList.remove("hidden");
-      this.game.state.lighterVisible = true;
-    }.bind(this));
-    $id("use-lighter").addEventListener("click", function() {
-      if (this.game.state.lighterBurning) {
-        this.showMessage("It is dark again.");
-        this.game.state.lighterBurning = false;
-      } else if (! this.game.state.messagesShown.intro_flame) {
-        this.showMessageOnce("The flame looks funny... Oh, right.",
-                             "intro_flame");
-        this.showMessageOnce(["i", null, null, "Lack of gravity."],
-                             "intro_gravity");
-        this.showMessageOnce("\u2014 NYI after this point :( \u2014",
-                             "intro-nyi");
-        this.game.state.lighterBurning = true;
-      } else {
-        this.showMessage("The flame is blue and spherical.");
-        this.game.state.lighterBurning = true;
-      }
-      updateLighterText();
+      var lighter = new Item.Lighter(null, this.game);
+      this.game.state.items["lighter"] = lighter;
+      this._update(lighter);
     }.bind(this));
   },
 
@@ -336,6 +307,14 @@ GameUI.prototype = {
     } else {
       $id("pause-game").textContent = "Pause";
     }
+  },
+
+  /* Update the given item's UI */
+  _update: function(item) {
+    var node = item.render();
+    var tab = $id(item._uitab);
+    if (node.parentNode != tab)
+      tab.appendChild(node);
   },
 
   /* Append a message to the message bar without updating the game state
@@ -388,6 +367,12 @@ function Item(type, data, game) {
 }
 
 Item.prototype = {
+  /* Return a user interface for this item, creating it if necessary */
+  render: function() {
+    if (! this._uinode) this._uinode = $make("span");
+    return this._uinode;
+  },
+
   /* OOP shenanigans */
   consutructor: Item,
 
@@ -437,9 +422,64 @@ Item.defineType = function(name, props) {
   return func;
 };
 
+/* The first item to encounter is the lighter */
+Item.defineType("Lighter", {
+  /* Which tab in the UI to display in? */
+  _uitab: "starttab",
+
+  /* Initialize */
+  __init__: function(anew) {
+    if (typeof this.data != "object" || this.data == null)
+      this.data = {lit: false, fill: 0.8, introShown: false};
+  },
+
+  /* Render this item to a DOM node */
+  render: function() {
+    if (! this._uinode) {
+      this._uinode = $make("div", "item-card fade-in", {id: "lighter"}, [
+        ["strong", "item-name", null, "Lighter"],
+        ["button", "btn btn-small item-use", null, "..."],
+        ["div", "item-bar", null, [
+          ["div", "item-bar-content"]
+        ]]
+      ]);
+      $sel('.item-use', this._uinode).addEventListener("click",
+        this.use.bind(this));
+    }
+    $sel(".item-use", this._uinode).textContent =
+      (this.data.lit) ? "Extinguish" : "Ignite";
+    $sel(".item-bar-content", this._uinode).style.width =
+      (this.data.fill * 100) + "%";
+    return this._uinode;
+  },
+
+  /* Interact with the item */
+  use: function() {
+    this.data.lit = (! this.data.lit);
+    if (this.data.lit) {
+      if (this.data.introShown) {
+        this._game.ui.showMessage("The flame is blue and spherical.");
+      } else {
+        this._game.ui.showMessageOnce("The flame looks funny... Oh, right.",
+                                      "intro_flame");
+        this._game.ui.showMessageOnce(["i", null, null, "Lack of gravity."],
+                                      "intro_gravity");
+        this.data.introShown = true;
+      }
+    } else {
+      this._game.ui.showMessage("It is dark again.");
+    }
+    this._game.ui._update(this);
+  }
+});
+
 /* Handler for showing messages */
 DascaAction.addHandler("showMessage", function() {
   this.context.game.ui.showMessage(this.extra);
+});
+
+DascaAction.addHandler("showMessageOnce", function() {
+  this.context.game.ui.showMessageOnce(this.extra[0], this.extra[1]);
 });
 
 /* Handler for showing tabs */
