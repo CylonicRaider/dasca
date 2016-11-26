@@ -72,6 +72,8 @@ h1 {
   cursor: pointer;
   background: none;
   outline: none;
+  text-decoration: none;
+  outline-offset: -3px;
 }
 .btn::-moz-focus-inner {
   margin: 0;
@@ -83,7 +85,6 @@ h1 {
 }
 .btn:active, .btn:focus {
   outline: 1px dotted #808080;
-  outline-offset: -3px;
 }
 .btn:active {
   outline-color: #c0c0c0;
@@ -92,13 +93,20 @@ h1 {
   display: block;
   width: 100%;
 }
-.btn-small {
+.btn-small, .btn-link {
   margin: 0;
   border: 0;
   padding: 0;
-}
-.btn-small:active, .btn-small:focus {
   outline-offset: -1px;
+}
+.btn-link {
+  color: #0080ff;
+}
+.btn-link:active {
+  color: #ff0000;
+}
+.btn-link:visited {
+  color: #c000c0;
 }
 
 #mainscreen {
