@@ -212,6 +212,20 @@ Game.prototype = {
     this.state.scheduler.addTask(this.makeTask(name, extra), time);
   },
 
+  /* Create a new instance of an item */
+  makeItem: function(type, data) {
+    return new Item[type](data, this);
+  },
+
+  /* Create a new item and add it to the given UI tab */
+  addItem: function(name, type, data, tab) {
+    var it = this.makeItem(type, data);
+    it.uitab = tab;
+    this.state.items[name] = it;
+    this.ui._update(it);
+  },
+
+  /* Terminate the game */
   exit: function() {
     this.running = false;
     this.state.scheduler.clock.setScale(0);
@@ -305,9 +319,7 @@ GameUI.prototype = {
     $id("btn-pockets").addEventListener("click", function() {
       this.showMessage("You find a lighter.");
       $id("btn-pockets").classList.add("hidden");
-      var lighter = new Item.Lighter(null, this.game);
-      this.game.state.items["lighter"] = lighter;
-      this._update(lighter);
+      this.game.addItem("lighter", "Lighter", null, "starttab");
     }.bind(this));
   },
 
@@ -323,7 +335,7 @@ GameUI.prototype = {
   /* Update the given item's UI */
   _update: function(item) {
     var node = item.render();
-    var tab = $id(item._uitab);
+    var tab = $id(item.uitab);
     if (node.parentNode != tab)
       tab.appendChild(node);
   },
@@ -435,9 +447,6 @@ Item.defineType = function(name, props) {
 
 /* The first item to encounter is the lighter */
 Item.defineType("Lighter", {
-  /* Which tab in the UI to display in? */
-  _uitab: "starttab",
-
   /* Initialize */
   __init__: function(anew) {
     if (typeof this.data != "object" || this.data == null)
