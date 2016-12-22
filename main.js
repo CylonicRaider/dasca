@@ -396,6 +396,9 @@ Item.prototype = {
     return this._uinode;
   },
 
+  /* Default value */
+  uitab: null,
+
   /* OOP shenanigans */
   consutructor: Item,
 
