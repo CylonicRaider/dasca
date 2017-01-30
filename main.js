@@ -186,6 +186,8 @@ Game.prototype = {
       this.addTask("showMessage", x[0], x[1]);
     }, this);
     this.addTask("showTab", "starttab", 10);
+    this.addItem("pockets", "Button", {text: "Check pockets",
+      action: "findLighter"}, "starttab");
   },
 
   /* Pause the game */
@@ -225,6 +227,12 @@ Game.prototype = {
     this.ui._update(it);
   },
 
+  /* Remove the given item from the given UI tab */
+  removeItem: function(name) {
+    this.ui._remove(this.state.items[name]);
+    delete this.state.items[name];
+  },
+
   /* Terminate the game */
   exit: function() {
     this.running = false;
@@ -235,6 +243,14 @@ Game.prototype = {
   /* OOP hook */
   constructor: Game
 };
+
+/* Find the lighter */
+DascaAction.addHandler("findLighter", function() {
+  var game = this.context.game;
+  game.removeItem("pockets");
+  game.ui.showMessage("You find a lighter.");
+  game.addItem("lighter", "Lighter", null, "starttab");
+});
 
 /* Construct a new game state
  * For restoring a saved state, use deserialization. */
@@ -271,10 +287,7 @@ GameUI.prototype = {
         ["div", "row row-small inset", {id: "tabbar"}],
         ["div", "row row-all inset", null, [
           ["div", "col-all pane", {id: "mainpane"}, [
-            ["div", "selectable layer", {id: "starttab"}, [
-              ["button", "btn", {id: "btn-pockets"},
-                "Check pockets"]
-            ]]
+            ["div", "selectable layer", {id: "starttab"}]
           ]]
         ]]
       ]],
@@ -294,9 +307,6 @@ GameUI.prototype = {
         this._showMessage(messages[i], true);
     }
     var items = this.game.state.items;
-    if (items.lighter) {
-      $id("btn-pockets").classList.add("hidden");
-    }
     for (var k in items) {
       if (! items.hasOwnProperty(k)) continue;
       this._update(items[k]);
@@ -316,11 +326,6 @@ GameUI.prototype = {
     $id("exit-game").addEventListener("click", function() {
       this.game.exit();
     }.bind(this));
-    $id("btn-pockets").addEventListener("click", function() {
-      this.showMessage("You find a lighter.");
-      $id("btn-pockets").classList.add("hidden");
-      this.game.addItem("lighter", "Lighter", null, "starttab");
-    }.bind(this));
   },
 
   /* Adapt the UI to the current pause state of the game */
@@ -338,6 +343,13 @@ GameUI.prototype = {
     var tab = $id(item.uitab);
     if (node.parentNode != tab)
       tab.appendChild(node);
+  },
+
+  /* Remove the item from the UI */
+  _remove: function(item) {
+    var node = item.render();
+    if (node.parentNode)
+      node.parentNode.removeChild(node);
   },
 
   /* Append a message to the message bar without updating the game state
@@ -493,6 +505,30 @@ Item.defineType("Lighter", {
       this._game.ui.showMessage("It is dark again.");
     }
     this._game.ui._update(this);
+  }
+});
+
+/* Button item */
+Item.defineType("Button", {
+  /* Initialize */
+  __init__: function(anew) {
+    if (typeof this.data != "object" || this.data == null)
+      this.data = {text: "", action: "", extra: null};
+  },
+
+  /* Render this item into a DOM node */
+  render: function() {
+    if (! this._uinode) {
+      this._uinode = $make("button", "btn");
+      this._uinode.addEventListener("click", this.use.bind(this));
+    }
+    this._uinode.textContent = this.data.text;
+    return this._uinode;
+  },
+
+  /* Interact with the item */
+  use: function() {
+    this._game.addTask(this.data.action, this.data.extra, 0);
   }
 });
 
