@@ -491,18 +491,23 @@ Item.defineType("Lighter", {
   /* Interact with the item */
   use: function() {
     this.data.lit = (! this.data.lit);
-    if (this.data.lit) {
-      if (this.data.introShown) {
-        this._game.ui.showMessage("The flame is blue and spherical.");
-      } else {
+    if (! this.data.introShown) {
+      if (this.data.lit) {
         this._game.ui.showMessageOnce("The flame looks funny... Oh, right.",
                                       "intro_flame");
         this._game.ui.showMessageOnce(["i", null, null, "Lack of gravity."],
                                       "intro_gravity");
+      } else {
+        this._game.ui.showMessageOnce("It is dark again.", "intro_dark");
         this.data.introShown = true;
       }
     } else {
-      this._game.ui.showMessage("It is dark again.");
+      if (this.data.lit) {
+        this._game.ui.showMessageOnce("The flame is blue and spherical.",
+                                      "lighter_on");
+      } else {
+        this._game.ui.showMessageOnce("It is dark again.", "lighter_off");
+      }
     }
     this._game.ui._update(this);
   }
