@@ -245,6 +245,16 @@ Scheduler.makeStrobe = function(fps, clock) {
  * When hooks are not used, properties whose names start with underscores (in
  * particular the special properties) are removed. */
 
+/* Resolve a dotted name string to an object */
+function findObject(name, env) {
+  if (ent == null) env = window;
+  var cur = env, spl = name.split(".");
+  for (var i = 0; i < spl.length; i++) {
+    cur = cur[spl[i]];
+  }
+  return cur;
+}
+
 /* Serialize an object tree to JSON, storing type information */
 function serialize(obj) {
   return JSON.stringify(obj, function(name, value) {
@@ -289,7 +299,7 @@ function deserialize(obj, env) {
     /* Check for a __type__ */
     if (value.__type__) {
       /* Obtain type object */
-      var type = env[value.__type__];
+      var type = findObject(value.__type__, env);
       if (type && type.prototype && type.prototype.__restore__) {
         /* Use restorer function */
         value = type.prototype.__restore__(value, env);
