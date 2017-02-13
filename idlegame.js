@@ -50,52 +50,72 @@ Clock.prototype = {
     this.scale = scale;
   },
 
+  /* Change the scale of the clock relatively to the current one */
+  changeScale: function(factor) {
+    this.setScale(this.scale * factor);
+  },
+
+  /* Jump to the given time */
+  setTime: function(time) {
+    this.offset = time - this.source() * this.scale;
+  },
+
+  /* Change the time reported by the clock by the given increment */
+  changeTime: function(delta) {
+    this.offset -= delta;
+  },
+
   /* Serialization boilerplate */
-  constructor: Clock
+  constructor: Clock,
+
+  /* Seralize */
+  __save__: function(clock) {
+    if (! clock._realTime) throw new Error("Clock not serializable!");
+    return {scale: clock.scale, time: clock.now()};
+  },
+
+  /* Deserialize */
+  __restore__: function(data) {
+    return Clock.realTime(data.scale, data.time);
+  }
 };
 
 /* Construct a clock that returns (optionally scaled) real time
  * The clock counts from zero */
 Clock.realTime = function(scale, start) {
   if (scale == null) scale = 1.0;
-  scale *= 1e-3;
   var offset = (start == null) ? null : start - performance.now() * scale;
-  var ret = new Clock(performance.now.bind(performance), scale, offset);
+  var ret = new Clock(function() {
+    return performance.now() / 1000.0;
+  }, scale, offset);
   ret._realTime = true;
   return ret;
 };
 
-/* Seralize a Clock */
-Clock.__save__ = function(clock) {
-  if (! clock._realTime) throw new Error("Clock not serializable!");
-  return {scale: clock.scale * 1e3, time: clock.now()};
-};
-
-/* Deserialize a Clock */
-Clock.__restore__ = function(data) {
-  return Clock.realTime(data.scale, data.time);
-};
-
 /* *** Scheduler ***
- * Schedules call-backs to happen at certain times as defined by a Clock
+ * Schedules callbacks to happen at certain times as defined by a Clock
  * instance. */
 
 /* Construct a new scheduler
  * requeue is a funtion that somehow ("magically") ensures the function
  * to it is asynchronously called again some short time later; tasks is an
  * ordered array of objects whose "time" property is used to determine when
- * they are to run; clock is a Clock instance determining the time this
- * instance works with. The "running" property is set to true; it can be used
- * to stop the Scheduler.
+ * they are to run; contTasks is an array of tasks to be run continuously,
+ * i.e. at every call of run() (the same semantics as for tasks apply); clock
+ * is a Clock instance determining the time this instance works with. The
+ * "running" property is set to true; it can be used to stop the Scheduler.
  * To start it, ensure the "running" property is true and call the run()
  * method. */
-function Scheduler(requeue, tasks, clock) {
+function Scheduler(requeue, tasks, contTasks, clock) {
   if (tasks == null) tasks = [];
+  if (contTasks == null) contTasks = [];
   if (clock == null) clock = Clock.realTime();
   this.requeue = requeue;
   this.tasks = tasks;
+  this.contTasks = contTasks;
   this.clock = clock;
   this.running = true;
+  this._idle = true;
 }
 
 Scheduler.prototype = {
@@ -116,8 +136,16 @@ Scheduler.prototype = {
       /* Run it */
       this.runTask(this.tasks.shift(), now);
     }
+    /* Run the continuous tasks */
+    for (var i = 0; i < this.contTasks.length; i++) {
+      this.runTask(this.contTasks[i], now);
+    }
     /* Schedule next iteration */
-    this.requeue(this.run.bind(this));
+    if (this.tasks.length || this.contTasks.length) {
+      this.requeue(this.run.bind(this));
+    } else {
+      this._idle = true;
+    }
   },
 
   /* Run a singular task, providing the given timestamp
@@ -142,7 +170,16 @@ Scheduler.prototype = {
     for (i = 0; i < this.tasks.length; i++) {
       if (this.tasks[i].time > time) break;
     }
-    this.tasks.splice(0, i, task);
+    this.tasks.splice(i, 0, task);
+    if (this.running && this._idle) {
+      this._idle = false;
+      this.requeue(this.run.bind(this));
+    }
+  },
+
+  /* Schedule a task to be run after delta units of time */
+  addTaskIn: function(task, delta) {
+    this.addTask(task, this.clock.now() + delta);
   },
 
   /* Cancel all tasks */
@@ -151,12 +188,40 @@ Scheduler.prototype = {
   },
 
   /* OOP boilerplate */
-  constructor: Scheduler
+  constructor: Scheduler,
+
+  /* Prepare for serializing a Scheduler */
+  __save__: function(sched) {
+    var ret = {type: sched._type, tasks: sched.tasks,
+               contTasks: sched.contTasks, clock: sched.clock,
+               running: sched.running};
+    if (sched._type == "strobe") {
+      ret.fps = sched._fps;
+    } else if (sched._type != "animated") {
+      throw new Error("Scheduler not serializable!");
+    }
+    return ret;
+  },
+
+  /* Deserialize a Scheduler */
+  __restore__: function(data) {
+    var ret;
+    if (data.type == "animated") {
+      ret = Scheduler.makeAnimated(data.clock);
+    } else if (data.type == "strobe") {
+      ret = Scheduler.makeStrobe(data.fps, data.clock);
+    }
+    ret.tasks = data.tasks;
+    ret.contTasks = data.contTasks;
+    ret.running = data.running;
+    return ret;
+  }
 };
 
 /* Create a Scheduler for animations */
 Scheduler.makeAnimated = function(clock) {
-  var ret = new Scheduler(requestAnimationFrame.bind(window), null, clock);
+  var ret = new Scheduler(requestAnimationFrame.bind(window), null, null,
+                          clock);
   ret._type = "animated";
   return ret;
 };
@@ -166,42 +231,19 @@ Scheduler.makeStrobe = function(fps, clock) {
   var delay = 1000.0 / fps;
   var ret = new Scheduler(function(cb) {
     setTimeout(cb, delay);
-  }, null, clock);
+  }, null, null, clock);
   ret._type = "strobe";
   ret._fps = fps;
   return ret;
 };
 
-/* Prepare for serializing a Scheduler */
-Scheduler.__save__ = function(sched) {
-  var ret = {type: sched._type, tasks: sched.tasks, clock: sched.clock,
-             running: sched.running};
-  if (sched._type == "strobe") {
-    ret.fps = sched._fps;
-  } else if (sched._type != "animated") {
-    throw new Error("Scheduler not serializable!");
-  }
-  return ret;
-};
-
-/* Deserialize a Scheduler */
-Scheduler.__restore__ = function(data) {
-  var ret;
-  if (data.type == "animated") {
-    ret = Scheduler.makeAnimated(data.clock);
-  } else if (data.type == "strobe") {
-    ret = Scheduler.makeStrobe(data.fps, data.clock);
-  }
-  ret.tasks = data.tasks;
-  ret.running = data.running;
-  return ret;
-};
-
 /* *** Serialization ***
  * Serializes object trees (!) into JSON strings, allowing reified objects to
- * be of the correct type, to hook their (de)serialization process.
+ * be of the correct type, and to hook their (de)serialization process.
  * Input containing enumerable function properties is rejected (since those
- * are silently swallowed by JSON); use hooks to meaningfully handle them. */
+ * are silently swallowed by JSON); use hooks to meaningfully handle them.
+ * When hooks are not used, properties whose names start with underscores (in
+ * particular the special properties) are removed. */
 
 /* Serialize an object tree to JSON, storing type information */
 function serialize(obj) {
@@ -211,18 +253,25 @@ function serialize(obj) {
       throw new Error("Cannot serialize function");
     /* Only transform object values */
     if (typeof value != "object" || Array.isArray(value)) return value;
+    if (value === null) return null;
     /* Get a meaningful constructor name */
-    var cons = value.constructor.__sername__;
+    var cons = value.__sername__;
     if (! cons) cons = value.constructor.name;
     if (! cons) cons = Object.prototype.toString(value).slice(8, -1);
     if (cons == "Object") cons = undefined;
     /* Copy properties into new object, or let object serialize itself */
     var ret;
-    if (value.constructor.__save__) {
-      ret = value.constructor.__save__(value);
+    if (value.__save__) {
+      ret = value.__save__(value);
     } else {
       ret = {};
-      for (var prop in value) ret[prop] = value[prop];
+      for (var prop in value) {
+        if (typeof value[prop] == "function" && ! value.hasOwnProperty(prop))
+          continue;
+        if (/^_/.test(prop))
+          continue;
+        ret[prop] = value[prop];
+      }
     }
     /* Add __type__ */
     ret.__type__ = cons;
@@ -241,9 +290,9 @@ function deserialize(obj, env) {
     if (value.__type__) {
       /* Obtain type object */
       var type = env[value.__type__];
-      if (type && type.__restore__) {
+      if (type && type.prototype && type.prototype.__restore__) {
         /* Use restorer function */
-        value = type.__restore__(value);
+        value = type.prototype.__restore__(value, env);
       } else if (type) {
         /* Assume an object is deserializable as-is */
         var newVal = Object.create(type.prototype);

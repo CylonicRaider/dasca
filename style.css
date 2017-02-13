@@ -13,22 +13,42 @@ body, #game {
 }
 
 #game {
-  font: 5vmin serif;
+  font: 5vmin/1.2 serif;
 }
 
-#game, #game > .layer {
+#game, .layer {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
 }
 
-.layer.text-popup {
+.layer {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
+              visibility 100ms step-end;
+}
+.layer.selected {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
+              visibility 100ms step-start;
+  z-index: 1000;
+}
+
+.pane {
+  position: relative;
+}
+
+.text-popup {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  padding: 0 25vw;
 }
 
 h1 {
@@ -42,4 +62,148 @@ h1 {
 .text-popup > hr {
   border: none;
   height: 0.2em;
+}
+
+.btn {
+  border: 1px solid #808080;
+  margin: 0.25em;
+  padding: 3px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  background: none;
+  outline: none;
+  text-decoration: none;
+  outline-offset: -3px;
+}
+.btn::-moz-focus-inner {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+.btn:hover {
+  text-decoration: underline;
+}
+.btn:active, .btn:focus {
+  outline: 1px dotted #808080;
+}
+.btn:active {
+  outline-color: #c0c0c0;
+}
+.btn-wide {
+  display: block;
+  width: 100%;
+}
+.btn-small, .btn-link {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  outline-offset: -1px;
+}
+.btn-link {
+  color: #0080ff;
+}
+.btn-link:active {
+  color: #ff0000;
+}
+.btn-link:visited {
+  color: #c000c0;
+}
+
+#mainscreen {
+  display: flex;
+  flex-direction: column;
+}
+
+#mainscreen .row {
+  display: flex;
+}
+#mainscreen .row-all {
+  flex-grow: 1;
+}
+#mainscreen .row-small {
+  height: 1.2em;
+  font-size: 0.75em;
+}
+#mainscreen .col {
+  display: flex;
+  flex-direction: column;
+}
+#mainscreen .col-quarter {
+  width: 25%;
+}
+#mainscreen .col-all {
+  flex-grow: 1;
+}
+#mainscreen .inset {
+  padding: 0.5em;
+}
+#mainscreen .row > hr {
+  margin: 0 0.25em;
+  border: 0;
+  padding: 0;
+  width: 1px;
+  background: white;
+}
+
+#messagebar {
+  /* HACK to prevent bar from letting the container expand */
+  height: 0;
+  min-height: 100%;
+  overflow-y: auto;
+  font-size: 0.75em;
+}
+#messagebar p {
+  margin-top: 0.25em;
+  animation: fade-in 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
+}
+#messagebar p:first-child {
+  margin-top: 0;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.item-card {
+  display: flex;
+  flex-wrap: wrap;
+}
+.item-card .item-name {
+  flex-grow: 1;
+}
+.item-card .item-bar {
+  width: 100%;
+  height: 0.25em;
+  background: #c00000;
+}
+.item-card .item-bar-content {
+  width: 0%;
+  height: 100%;
+  background: #008000;
+}
+
+.fade-in {
+  animation: fade-in 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
+}
+
+.dim {
+  opacity: 0.5;
+}
+
+.hidable {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
+                visibility 100ms step-start;
+}
+.hidable.hidden {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
+                visibility 100ms step-end;
+}
+:not(.hidable).hidden {
+  display: none;
 }

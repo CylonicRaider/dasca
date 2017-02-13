@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- Dasca, an idle game by @CylonicRaider (github.com/CylonicRaider/dasca)
-     This file contains the UI templates. -->
+     This file contains the initial UI. -->
 <html>
   <head>
     <meta charset="utf-8"/>
@@ -13,16 +13,28 @@
     <style type="text/css">
 /* Avoid FOUC */
 body { background: black; color: white; }
-/* TODO: Implement layer transitions in engine
-.layer { visibility: hidden; } */
+.layer { visibility: hidden; }
     </style>
   </head>
   <body>
-    <div id="game">
-      <div id="titlescreen" class="layer text-popup">
+    <div class="pane" id="game">
+      <div id="titlescreen" class="selectable layer text-popup">
         <h1>Dasca</h1>
         <hr/>
-        <p class="subtitle">Actually NYI. :(</p>
+        <p class="subtitle">In early development! :)</p>
+        <hr/>
+        <button id="startgame" class="btn btn-wide">Start game</button>
+        <button id="credits-title" class="btn btn-wide">Credits</button>
+      </div>
+      <div id="mainscreen" class="selectable layer"></div>
+      <div id="creditscreen" class="selectable layer text-popup">
+        <h2>Credits</h2>
+        <hr/>
+        <p>Made by <em>@CylonicRaider</em></p>
+        <p>Inspired by <em>Crank</em></p>
+        <p><a class="btn btn-link"
+          href="https://github.com/CylonicRaider/Dasca/">Source code</a></p>
+        <button id="back-credits" class="btn btn-wide">Back</button>
       </div>
     </div>
   </body>
