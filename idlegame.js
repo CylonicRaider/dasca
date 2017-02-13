@@ -69,9 +69,9 @@ Clock.prototype = {
   constructor: Clock,
 
   /* Seralize */
-  __save__: function(clock) {
-    if (! clock._realTime) throw new Error("Clock not serializable!");
-    return {scale: clock.scale, time: clock.now()};
+  __save__: function() {
+    if (! this._realTime) throw new Error("Clock not serializable!");
+    return {scale: this.scale, time: this.now()};
   },
 
   /* Deserialize */
@@ -191,13 +191,13 @@ Scheduler.prototype = {
   constructor: Scheduler,
 
   /* Prepare for serializing a Scheduler */
-  __save__: function(sched) {
-    var ret = {type: sched._type, tasks: sched.tasks,
-               contTasks: sched.contTasks, clock: sched.clock,
-               running: sched.running};
-    if (sched._type == "strobe") {
-      ret.fps = sched._fps;
-    } else if (sched._type != "animated") {
+  __save__: function() {
+    var ret = {type: this._type, tasks: this.tasks,
+               contTasks: this.contTasks, clock: this.clock,
+               running: this.running};
+    if (this._type == "strobe") {
+      ret.fps = this._fps;
+    } else if (this._type != "animated") {
       throw new Error("Scheduler not serializable!");
     }
     return ret;
@@ -272,7 +272,7 @@ function serialize(obj) {
     /* Copy properties into new object, or let object serialize itself */
     var ret;
     if (value.__save__) {
-      ret = value.__save__(value);
+      ret = value.__save__();
     } else {
       ret = {};
       for (var prop in value) {
@@ -317,3 +317,57 @@ function deserialize(obj, env) {
     return value;
   });
 }
+
+/* *** Action ***
+ * A serializable wrapper around a method call. Can be used as a callback for
+ * Scheduler; for that reason, a property named "time" is serialized and
+ * restored if present. */
+
+/* Construct a new Action
+ * self is the name (!) of an object to be resolved relative to env; func is
+ * the name of a function to be resolved relative to self; args is an array
+ * of arguments. The function is called with the object resolved for self as
+ * the this object and args as the positional arguments.
+ * If args is omitted, an empty array is used; if env is omitted, the global
+ * object (i.e. window) is used. */
+function Action(self, func, args, env) {
+  this.self = self;
+  this.func = func;
+  this.args = args || [];
+  this.env = env || window;
+}
+
+Action.prototype = {
+  /* Do what is said on the tin
+   * Resolve and run the function represented by this object as described
+   * along with the constructor, and return its return value. */
+  run: function() {
+    var self = findObject(this.self, this.env);
+    return findObject(this.func, self).apply(self, this.args);
+  },
+
+  /* Scheduler callback
+   * Differently to run(), this method accepts another argument, which is
+   * appended to the arguments passed to the function. */
+  cb: function(now) {
+    var self = findObject(this.self, this.env);
+    return findObject(this.func, self).apply(self, this.args.concat([now]));
+  },
+
+  /* OOP boilerplate */
+  constructor: Action,
+
+  /* Prepare for serialization */
+  __save__: function() {
+    var ret = {self: this.self, func: this.func, args: this.args};
+    if (this.time != null) ret.time = this.time;
+    return ret;
+  },
+
+  /* Deserialize */
+  __restore__: function(data, env) {
+    var ret = new Action(data.self, data.func, data.args, env);
+    if (data.time != null) ret.time = data.time;
+    return ret;
+  }
+};
