@@ -71,3 +71,57 @@ function $makeNode(tag, className, attrs, children) {
   }
   return ret;
 }
+
+/* Show the given UI element, hiding any siblings and showing all its
+ * showable parents */
+function showNode(node) {
+  if (! node) return;
+  /* Resolve ID-s */
+  if (typeof node == "string") node = $id(node);
+  /* Hide siblings */
+  var prev = node.previousElementSibling, next = node.nextElementSibling;
+  while (prev) {
+    if (prev.classList.contains("selectable"))
+      prev.classList.remove("selected");
+    prev = prev.previousElementSibling;
+  }
+  while (next) {
+    if (next.classList.contains("selectable"))
+      next.classList.remove("selected");
+    next = next.nextElementSibling;
+  }
+  /* Show parent */
+  showNode(node.parentNode);
+  /* Show node */
+  if (node.classList && node.classList.contains("selectable"))
+      node.classList.add("selected");
+}
+
+/* Hide all selectable children of node
+ * Approximate opposite of showNode. */
+function hideNodes(node) {
+  if (! node) return;
+  /* Resolve ID-s */
+  if (typeof node == "string") node = $id("node");
+  /* Hide children */
+  for (var ch = node.firstElementChild; ch; ch = ch.nextElementSibling) {
+    if (ch.classList.contains("selectable"))
+      ch.classList.remove("selected");
+  }
+}
+
+/* Initialization */
+function init() {
+  showNode("titlescreen");
+  $id("startgame").addEventListener("click", function() {
+    showNode("mainscreen");
+  });
+  $id("credits-title").addEventListener("click", function() {
+    showNode("creditscreen");
+  });
+  $id("back-credits").addEventListener("click", function() {
+    showNode("titlescreen");
+  });
+}
+
+window.addEventListener("load", init);
