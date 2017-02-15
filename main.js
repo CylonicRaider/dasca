@@ -4,7 +4,8 @@
 
 'use strict';
 
-/* Utilities */
+/* *** Utilities *** */
+
 function $id(id, elem) {
   return (elem || document).getElementById(id);
 }
@@ -110,7 +111,42 @@ function hideNodes(node) {
   }
 }
 
-/* Initialization */
+
+/* *** Game mechanics *** */
+
+/* A value changing over time
+ * A variable has a value, and a set of handlers which are invoked on every
+ * update of it that return increments which are applied to the variable
+ * cumulatively.
+ * Handlers are objects whose "cb" method is called with three parameters:
+ * variable: The Variable object.
+ * delta   : The time difference since the last update.
+ * now     : The current time.
+ * The return values are differences whose sum is added to the value of the
+ * variable after each update. */
+function Variable(value) {
+  this.value = value;
+  this.handlers = [];
+  this.lastUpdate = null;
+}
+
+Variable.prototype = {
+  /* Aggregate the results of the handlers' return values and increment the
+   * value by them. */
+  update: function(now) {
+    if (this.lastUpdate == null) this.lastUpdate = now;
+    var delta = now - this.lastUpdate, incr = 0, hnd = this.handlers;
+    for (var i = 0; i < hnd.length; i++)
+      incr += hnd[i].cb(this, delta, now);
+    this.value += incr;
+  },
+
+  /* OOP */
+  constructor: Variable
+};
+
+/* *** Initialization *** */
+
 function init() {
   showNode("titlescreen");
   $id("startgame").addEventListener("click", function() {
