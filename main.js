@@ -156,7 +156,6 @@ Variable.prototype = {
 /* *** Initialization *** */
 
 function init() {
-  showNode("titlescreen");
   $id("startgame").addEventListener("click", function() {
     showNode("mainscreen");
   });
@@ -166,6 +165,7 @@ function init() {
   $id("back-credits").addEventListener("click", function() {
     showNode("titlescreen");
   });
+  showNode("titlescreen");
 }
 
 window.addEventListener("load", init);
