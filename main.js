@@ -123,7 +123,10 @@ function hideNodes(node) {
  * delta   : The time difference since the last update.
  * now     : The current time.
  * The return values are differences whose sum is added to the value of the
- * variable after each update. */
+ * variable after each update.
+ * If the handler has a rate property, the callback is not invoked, and
+ * the change is instead calculated as the product of the time passed and
+ * the rate. */
 function Variable(value) {
   this.value = value;
   this.handlers = [];
@@ -136,8 +139,13 @@ Variable.prototype = {
   update: function(now) {
     if (this.lastUpdate == null) this.lastUpdate = now;
     var delta = now - this.lastUpdate, incr = 0, hnd = this.handlers;
-    for (var i = 0; i < hnd.length; i++)
-      incr += hnd[i].cb(this, delta, now);
+    for (var i = 0; i < hnd.length; i++) {
+      if (hdn[i].rate != null) {
+        incr += hnd[i].rate * delta;
+      } else {
+        incr += hnd[i].cb(this, delta, now);
+      }
+    }
     this.value += incr;
   },
 
