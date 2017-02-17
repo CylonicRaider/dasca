@@ -247,7 +247,7 @@ Scheduler.makeStrobe = function(fps, clock) {
 
 /* Resolve a dotted name string to an object */
 function findObject(name, env) {
-  if (ent == null) env = window;
+  if (env == null) env = window;
   var cur = env, spl = name.split(".");
   for (var i = 0; i < spl.length; i++) {
     cur = cur[spl[i]];
