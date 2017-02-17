@@ -152,6 +152,45 @@ Variable.prototype = {
   constructor: Variable
 };
 
+/* The main game object */
+function Game(state) {
+  if (state == null) {
+    this.state = new GameState(this);
+  } else {
+    var env = Object.create(window);
+    env.game = this;
+    this.state = deserialize(state, env);
+  }
+}
+
+Game.prototype = {
+  /* OOP */
+  constructor: Game
+};
+
+/* The (serializable) state of a game
+ * The constructor creates a new state; for restoring a saved one, use the
+ * deserialization function (in a suitable environment, which is created by
+ * the constructor of Game). */
+function GameState(game) {
+  this._game = game;
+}
+
+GameState.prototype = {
+  /* OOP */
+  constructor: GameState,
+
+  /* Deserialization */
+  __restore__: function(obj, env) {
+    var ret = Object.create(GameState);
+    for (var key in obj) {
+      if (! /^_/.test(key) && obj.hasOwnProperty(key)) ret[key] = obj[key];
+    }
+    ret._game = env.game;
+    return ret;
+  }
+};
+
 /* *** Initialization *** */
 
 function init() {
