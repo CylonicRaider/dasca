@@ -111,7 +111,6 @@ function hideNodes(node) {
   }
 }
 
-
 /* *** Game mechanics *** */
 
 /* A value changing over time
