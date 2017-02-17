@@ -161,6 +161,7 @@ function Game(state) {
     env.game = this;
     this.state = deserialize(state, env);
   }
+  this.ui = new GameUI(this);
 }
 
 Game.prototype = {
@@ -189,6 +190,33 @@ GameState.prototype = {
     ret._game = env.game;
     return ret;
   }
+};
+
+/* The DOM-based user interface of the game */
+function GameUI(game) {
+  this.game = game;
+  this.root = null;
+  this.parent = null;
+}
+
+GameUI.prototype = {
+  /* Produce the DOM tree corresponding to this object */
+  render: function() {
+    if (this.root == null) {
+      this.root = $makeNode("div", {id: "gamepane"});
+    }
+    return this.root;
+  },
+
+  /* Embed the game's UI into the given DOM node
+   * If not already done, the UI is constructed. */
+  mount: function(parent) {
+    this.parent = parent;
+    parent.appendChild(this.render());
+  },
+
+  /* Consistency */
+  constructor: GameUI
 };
 
 /* *** Initialization *** */
