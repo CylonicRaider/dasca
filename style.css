@@ -16,7 +16,7 @@ body, #game {
   font: 5vmin/1.2 serif;
 }
 
-#game, .layer {
+#game, #game-content, .layer {
   position: absolute;
   top: 0;
   left: 0;
@@ -110,7 +110,7 @@ h1 {
   color: #c000c0;
 }
 
-#mainscreen {
+#mainscreen, #game-content {
   display: flex;
   flex-direction: column;
 }

@@ -162,9 +162,20 @@ function Game(state) {
     this.state = deserialize(state, env);
   }
   this.ui = new GameUI(this);
+  this.running = true;
 }
 
 Game.prototype = {
+  /* Mount the game into the given node */
+  mount: function(node) {
+    this.ui.mount(node);
+  },
+
+  /* Stop running the game */
+  exit: function() {
+    this.running = false;
+  },
+
   /* OOP */
   constructor: Game
 };
@@ -204,7 +215,7 @@ GameUI.prototype = {
   /* Produce the DOM tree corresponding to this object */
   render: function() {
     if (this.root == null) {
-      this.root = $makeNode("div", "layer", {id: "gamepane"}, [
+      this.root = $makeNode("div", {id: "game-content"}, [
         ["div", "row row-all", [
           ["div", "col col-quarter inset", [
             ["div", {id: "messagebar"}]
@@ -220,6 +231,13 @@ GameUI.prototype = {
           ["button", "btn btn-small", {id: "exit-game"}, "Exit"]
         ]]
       ]);
+      $sel("#exit-game", this.root).addEventListener("click", function() {
+        this.game.exit();
+        showNode("titlescreen");
+      }.bind(this));
+      $sel("#credits-game", this.root).addEventListener("click", function() {
+        showNode("creditscreen");
+      });
     }
     return this.root;
   },
@@ -238,14 +256,21 @@ GameUI.prototype = {
 /* *** Initialization *** */
 
 function init() {
+  var game = null;
   $id("startgame").addEventListener("click", function() {
+    game = new Game();
+    game.mount($id("mainscreen"));
     showNode("mainscreen");
   });
   $id("credits-title").addEventListener("click", function() {
     showNode("creditscreen");
   });
   $id("back-credits").addEventListener("click", function() {
-    showNode("titlescreen");
+    if (game && game.running) {
+      showNode("mainscreen");
+    } else {
+      showNode("titlescreen");
+    }
   });
   showNode("titlescreen");
 }
