@@ -204,7 +204,22 @@ GameUI.prototype = {
   /* Produce the DOM tree corresponding to this object */
   render: function() {
     if (this.root == null) {
-      this.root = $makeNode("div", {id: "gamepane"});
+      this.root = $makeNode("div", "layer", {id: "gamepane"}, [
+        ["div", "row row-all", [
+          ["div", "col col-quarter inset", [
+            ["div", {id: "messagebar"}]
+          ]],
+          ["div", "col col-all", [
+            ["div", "row row-small inset", {id: "tabbar"}],
+            ["div", "row row-all inset", {id: "mainpane"}]
+          ]]
+        ]],
+        ["div", "row row-small inset", {id: "bottombar"}, [
+          ["button", "btn btn-small dim", {id: "credits-game"}, "Credits"],
+          ["div", "col col-all"],
+          ["button", "btn btn-small", {id: "exit-game"}, "Exit"]
+        ]]
+      ]);
     }
     return this.root;
   },
