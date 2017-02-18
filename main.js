@@ -174,6 +174,7 @@ Game.prototype = {
  * deserialization function (in a suitable environment, which is created by
  * the constructor of Game). */
 function GameState(game) {
+  this.scheduler = Scheduler.makeStrobe(100);
   this._game = game;
 }
 
