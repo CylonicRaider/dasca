@@ -154,12 +154,12 @@ Variable.prototype = {
 
 /* The main game object */
 function Game(state) {
+  this._env = Object.create(window);
+  this._env.game = this;
   if (state == null) {
     this.state = new GameState(this);
   } else {
-    var env = Object.create(window);
-    env.game = this;
-    this.state = deserialize(state, env);
+    this.state = deserialize(state, this._env);
   }
   this.ui = new GameUI(this);
   this.running = true;
@@ -169,6 +169,17 @@ Game.prototype = {
   /* Mount the game into the given node */
   mount: function(node) {
     this.ui.mount(node);
+  },
+
+  /* Start the game */
+  start: function() {
+    var intro = [[["i", null, "Darkness."], 1],
+                 [["i", null, "Silence."], 3],
+                 [["i", null, "Confinement."], 5],
+                 [["i", null, "Amnesia."], 8]];
+    intro.forEach(function(x) {
+      this.addTask(x[1], "game", "showMessage", [x[0]]);
+    }, this);
   },
 
   /* Get the value of a flag */
@@ -188,6 +199,12 @@ Game.prototype = {
     var old = this.state.flags[name];
     this.state.flags[name] = false;
     return (!! old);
+  },
+
+  /* Schedule an Action to be run */
+  addTask: function(delay, subject, method, args) {
+    var task = new Action(subject, method, args, this._env);
+    this.state.scheduler.addTaskIn(task, delay);
   },
 
   /* Show a log message */
@@ -300,6 +317,7 @@ function init() {
   $id("startgame").addEventListener("click", function() {
     game = new Game();
     game.mount($id("mainscreen"));
+    game.start();
     showNode("mainscreen");
   });
   $id("credits-title").addEventListener("click", function() {
