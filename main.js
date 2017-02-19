@@ -171,6 +171,25 @@ Game.prototype = {
     this.ui.mount(node);
   },
 
+  /* Get the value of a flag */
+  getFlag: function(name) {
+    return this.state.flags[name];
+  },
+
+  /* Set a flag; return whether the value changed */
+  setFlag: function(name) {
+    var old = this.state.flags[name];
+    this.state.flags[name] = true;
+    return (! old);
+  },
+
+  /* Clear a flag; return whether the value changes */
+  clearFlag: function(name) {
+    var old = this.state.flags[name];
+    this.state.flags[name] = false;
+    return (!! old);
+  },
+
   /* Stop running the game */
   exit: function() {
     this.running = false;
@@ -186,6 +205,7 @@ Game.prototype = {
  * the constructor of Game). */
 function GameState(game) {
   this.scheduler = Scheduler.makeStrobe(100);
+  this.flags = {};
   this._game = game;
 }
 
