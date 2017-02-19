@@ -190,6 +190,12 @@ Game.prototype = {
     return (!! old);
   },
 
+  /* Show a log message */
+  showMessage: function(msg) {
+    this.state.messages.push(msg);
+    this.ui._showMessage(msg);
+  },
+
   /* Stop running the game */
   exit: function() {
     this.running = false;
@@ -206,6 +212,7 @@ Game.prototype = {
 function GameState(game) {
   this.scheduler = Scheduler.makeStrobe(100);
   this.flags = {};
+  this.messages = [];
   this._game = game;
 }
 
@@ -258,6 +265,11 @@ GameUI.prototype = {
       $sel("#credits-game", this.root).addEventListener("click", function() {
         showNode("creditscreen");
       });
+      if (this.game.state.messages.length) {
+        var m = this.game.state.messages;
+        for (var i = 0; i < m.length; i++)
+          this._showMessage(m[i]);
+      }
     }
     return this.root;
   },
@@ -267,6 +279,14 @@ GameUI.prototype = {
   mount: function(parent) {
     this.parent = parent;
     parent.appendChild(this.render());
+  },
+
+  /* Message showing backend */
+  _showMessage: function(text) {
+    var msgnode = $makeNode("p", "log-message", [text]);
+    var msgbar = $sel("#messagebar", this.root);
+    msgbar.appendChild(msgnode);
+    msgbar.scrollTop = msgbar.scrollHeight;
   },
 
   /* Consistency */
