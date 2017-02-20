@@ -178,7 +178,7 @@ Game.prototype = {
                  [["i", null, "Confinement."], 5],
                  [["i", null, "Amnesia."], 8]];
     intro.forEach(function(x) {
-      this.addTask(x[1], "game", "showMessage", [x[0]]);
+      this.addTask(x[1], "showMessage", x[0]);
     }, this);
   },
 
@@ -202,9 +202,17 @@ Game.prototype = {
   },
 
   /* Schedule an Action to be run */
-  addTask: function(delay, subject, method, args) {
+  addTaskEx: function(delay, subject, method, args) {
     var task = new Action(subject, method, args, this._env);
-    this.state.scheduler.addTaskIn(task, delay);
+    return this.state.scheduler.addTaskIn(task, delay);
+  },
+
+  /* Convenience wrapper for addTaskEx()
+   * Arguments are passed variadically. */
+  addTask: function(delay, method) {
+    var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
+    var args = Array.prototype.slice.call(arguments, 2);
+    return this.addTaskEx(delay, m[1], m[2], args);
   },
 
   /* Show a log message */
