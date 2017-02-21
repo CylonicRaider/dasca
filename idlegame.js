@@ -296,6 +296,7 @@ function deserialize(obj, env) {
   return JSON.parse(obj, function(name, value) {
     /* Ignore non-objects */
     if (typeof value != "object" || Array.isArray(value)) return value;
+    if (value == null) return null;
     /* Check for a __type__ */
     if (value.__type__) {
       /* Obtain type object */
