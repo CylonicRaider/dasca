@@ -411,10 +411,15 @@ GameUI.prototype = {
 
 /* *** Initialization *** */
 
+var Dasca = {
+  game: null
+};
+
 function init() {
   var game = null;
   $id("startgame").addEventListener("click", function() {
     game = new Game();
+    Dasca.game = game;
     game.mount($id("mainscreen"));
     game.start();
     showNode("mainscreen");
