@@ -169,6 +169,11 @@ function Game(state) {
 }
 
 Game.prototype = {
+  /* Save the game state into a string */
+  save: function() {
+    return serialize(this.state);
+  },
+
   /* Mount the game into the given node */
   mount: function(node) {
     this.ui.mount(node);
