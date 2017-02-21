@@ -247,11 +247,11 @@ GameState.prototype = {
 
   /* Deserialization */
   __restore__: function(obj, env) {
-    var ret = Object.create(GameState);
+    /* Let unset fields fall back to at least something */
+    var ret = new GameState(env.game);
     for (var key in obj) {
       if (! /^_/.test(key) && obj.hasOwnProperty(key)) ret[key] = obj[key];
     }
-    ret._game = env.game;
     return ret;
   }
 };
