@@ -6,8 +6,11 @@
 
 /* *** Utilities *** */
 
-function $id(id, elem) {
-  return (elem || document).getElementById(id);
+function $id(id) {
+  return document.getElementById(id);
+}
+function $idx(id, elem) {
+  return elem.querySelector("#" + id);
 }
 function $sel(sel, elem) {
   return (elem || document).querySelector(sel);
@@ -173,6 +176,7 @@ Game.prototype = {
 
   /* Start the game */
   start: function() {
+    this.addTab("start", "Cockpit", {hidden: true});
     var intro = [[["i", null, "Darkness."], 1],
                  [["i", null, "Silence."], 3],
                  [["i", null, "Confinement."], 5],
@@ -180,6 +184,7 @@ Game.prototype = {
     intro.forEach(function(x) {
       this.addTask(x[1], "showMessage", x[0]);
     }, this);
+    this.addTask(10, "showTab", "start");
   },
 
   /* Get the value of a flag */
@@ -221,6 +226,22 @@ Game.prototype = {
     this.ui._showMessage(msg);
   },
 
+  /* Add a UI tab */
+  addTab: function(name, dispname, options) {
+    if (! options) options = {};
+    options.name = dispname;
+    if (this.state.tabOrder.indexOf(name) == -1)
+      this.state.tabOrder.push(name);
+    this.state.tabs[name] = options;
+    this.ui._addTab(name, dispname, options);
+  },
+
+  /* Select a UI tab */
+  showTab: function(name, hidden, noShow) {
+    if (hidden != null) this.state.tabs[name].hidden = hidden;
+    this.ui._showTab(name, this.state.tabs[name].hidden, noShow);
+  },
+
   /* Stop running the game */
   exit: function() {
     this.running = false;
@@ -236,8 +257,18 @@ Game.prototype = {
  * the constructor of Game). */
 function GameState(game) {
   this.scheduler = Scheduler.makeStrobe(100);
+  // {string -> bool}. Can be used to show one-off messages.
   this.flags = {};
+  // [string]. Stores log messages.
   this.messages = [];
+  // {string -> object}. Name is the codename of a tab; value contains the
+  // display name of the tab (as "name") and, optionally, whether its button
+  // should not be displayed.
+  this.tabs = {};
+  // [string] The order in which the tab buttons should be arranged.
+  this.tabOrder = [];
+  // string. Contains the codename of the current tab, or null for none.
+  this.currentTab = null;
   this._game = game;
 }
 
@@ -261,6 +292,8 @@ function GameUI(game) {
   this.game = game;
   this.root = null;
   this.parent = null;
+  this._tabs = {};
+  this._tabButtons = {};
 }
 
 GameUI.prototype = {
@@ -273,8 +306,8 @@ GameUI.prototype = {
             ["div", {id: "messagebar"}]
           ]],
           ["div", "col col-all", [
-            ["div", "row row-small inset", {id: "tabbar"}],
-            ["div", "row row-all inset", {id: "mainpane"}]
+            ["div", "row row-small row-btn vinset", {id: "tabbar"}],
+            ["div", "row row-all pane", {id: "mainpane"}]
           ]]
         ]],
         ["div", "row row-small inset", {id: "bottombar"}, [
@@ -283,17 +316,22 @@ GameUI.prototype = {
           ["button", "btn btn-small", {id: "exit-game"}, "Exit"]
         ]]
       ]);
-      $sel("#exit-game", this.root).addEventListener("click", function() {
+      $idx("exit-game", this.root).addEventListener("click", function() {
         this.game.exit();
         showNode("titlescreen");
       }.bind(this));
-      $sel("#credits-game", this.root).addEventListener("click", function() {
+      $idx("credits-game", this.root).addEventListener("click", function() {
         showNode("creditscreen");
       });
-      if (this.game.state.messages.length) {
-        var m = this.game.state.messages;
+      var state = this.game.state;
+      if (state.messages.length) {
+        var m = state.messages;
         for (var i = 0; i < m.length; i++)
           this._showMessage(m[i]);
+      }
+      for (var key in state.tabs) {
+        if (! state.tabs.hasOwnProperty(key)) continue;
+        this._addTab(key, state.tabs[key].name, state.tabs[key]);
       }
     }
     return this.root;
@@ -309,9 +347,57 @@ GameUI.prototype = {
   /* Message showing backend */
   _showMessage: function(text) {
     var msgnode = $makeNode("p", "log-message", [text]);
-    var msgbar = $sel("#messagebar", this.root);
+    var msgbar = $idx("messagebar", this.root);
     msgbar.appendChild(msgnode);
     msgbar.scrollTop = msgbar.scrollHeight;
+  },
+
+  /* Add a UI tab */
+  _addTab: function(name, dispname, options) {
+    if (! options) options = {};
+    this._tabButtons[name] = $makeNode("button",
+      "btn btn-small fade-in-fast", {id: "tabbtn-" + name}, [dispname]);
+    this._tabButtons[name].addEventListener("click", function() {
+      this.game.showTab(name);
+    }.bind(this));
+    var tabbar = $idx("tabbar", this.root);
+    if (! options.hidden && ! tabbar.contains(this._tabButtons[name])) {
+      $idx("tabbar", this.root).appendChild(this._tabButtons[name]);
+      this._sortTabs();
+    }
+    this._tabs[name] = $makeNode("div", "selectable layer",
+      {id: "tab-" + name});
+    $idx("mainpane", this.root).appendChild(this._tabs[name]);
+  },
+
+  /* Show a UI tab */
+  _showTab: function(name, hidden, noShow) {
+    var tabbtn = this._tabButtons[name];
+    var tabbar = $idx("tabbar", this.root);
+    if (! hidden && ! tabbar.contains(tabbtn)) {
+      tabbar.appendChild(tabbtn);
+      this._sortTabs();
+    }
+    if (! noShow)
+      showNode(this._tabs[name]);
+  },
+
+  /* Ensure the UI tab buttons are in the correct order */
+  _sortTabs: function() {
+    var indices = {}, order = this.game.state.tabOrder;
+    for (var i = 0; i < order.length; i++)
+      indices[order[i]] = i + 1;
+    var last = order.length + 1;
+    var tabbar = $idx("tabbar", this.root);
+    var nodes = Array.prototype.slice.call(tabbar.children);
+    nodes.sort(function(a, b) {
+      var ka = indices[a.id.replace(/^tabbtn-/, "")] || last;
+      var kb = indices[b.id.replace(/^tabbtn-/, "")] || last;
+      return (ka < kb) ? -1 : (ka > kb) ? 1 : 0;
+    });
+    nodes.forEach(function(el) {
+      tabbar.appendChild(el);
+    });
   },
 
   /* Consistency */

@@ -138,6 +138,15 @@ h1 {
 #mainscreen .inset {
   padding: 0.5em;
 }
+#mainscreen .vinset {
+  padding: 0.5em 0;
+}
+#mainscreen .hinset {
+  padding: 0 0.5em;
+}
+#mainscreen .row-btn > .btn + .btn {
+  margin-left: 0.5em;
+}
 #mainscreen .row > hr {
   margin: 0 0.25em;
   border: 0;
@@ -187,6 +196,9 @@ h1 {
 .fade-in {
   animation: fade-in 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
 }
+.fade-in-fast {
+  animation: fade-in 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
+}
 
 .dim {
   opacity: 0.5;
@@ -196,13 +208,13 @@ h1 {
   visibility: visible;
   opacity: 1;
   transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
-                visibility 100ms step-start;
+              visibility 100ms step-start;
 }
 .hidable.hidden {
   visibility: hidden;
   opacity: 0;
   transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
-                visibility 100ms step-end;
+              visibility 100ms step-end;
 }
 :not(.hidable).hidden {
   display: none;
