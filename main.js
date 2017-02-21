@@ -176,7 +176,12 @@ Game.prototype = {
 
   /* Mount the game into the given node */
   mount: function(node) {
-    this.ui.mount(node);
+    return this.ui.mount(node);
+  },
+
+  /* Unmount the game from its current parent node, if any */
+  unmount: function() {
+    return this.ui.unmount();
   },
 
   /* Start the game */
@@ -347,6 +352,16 @@ GameUI.prototype = {
   mount: function(parent) {
     this.parent = parent;
     parent.appendChild(this.render());
+    return this.root;
+  },
+
+  /* Remove the game's UI from the given DOM node */
+  unmount: function() {
+    if (! this.root || ! this.parent) return;
+    var oldParent = this.parent;
+    this.parent.removeChild(this.root);
+    this.parent = null;
+    return oldParent;
   },
 
   /* Message showing backend */
