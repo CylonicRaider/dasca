@@ -84,7 +84,8 @@ Clock.prototype = {
  * The clock counts from zero */
 Clock.realTime = function(scale, start) {
   if (scale == null) scale = 1.0;
-  var offset = (start == null) ? null : start - performance.now() * scale;
+  var offset = null;
+  if (start != null) offset = start - performance.now() / 1000.0 * scale;
   var ret = new Clock(function() {
     return performance.now() / 1000.0;
   }, scale, offset);

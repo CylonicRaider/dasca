@@ -166,6 +166,7 @@ function Game(state) {
   }
   this.ui = new GameUI(this);
   this.running = true;
+  this.state.scheduler.run();
 }
 
 Game.prototype = {
