@@ -315,6 +315,9 @@ function deserialize(obj, env) {
         throw new Error("Object not deserializable (cannot find type): " +
                         JSON.stringify(value));
       }
+      /* Allow alternative restoration handler. */
+      if (type && type.prototype && type.prototype.__reinit__)
+        type.prototype.__reinit__.call(value, env);
     }
     return value;
   });
