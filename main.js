@@ -425,6 +425,35 @@ GameUI.prototype = {
   constructor: GameUI
 };
 
+/* An Item encapsulates a single object the player can interact with
+ * Items must be serializable; hence, non-serializable properties must
+ * be prefixed with underscores. */
+function Item(game) {
+  this._game = game;
+}
+
+Item.prototype = {
+  /* Return the DOM node representing the UI of the item
+   * null if none. */
+  render: function() {
+    return null;
+  },
+
+  /* OOP and/or serialization */
+  constructor: Item,
+
+  /* Deserialize an item */
+  __restore__: function(object, env) {
+    var ret = Object.create(this.prototype);
+    for (var prop in object) {
+      if (! /^_/.test(prop) && object.hasOwnProperty(prop))
+        ret[prop] = object[prop];
+    }
+    ret._game = env.game;
+    return ret;
+  }
+};
+
 /* *** Initialization *** */
 
 var Dasca = {
