@@ -288,13 +288,8 @@ GameState.prototype = {
   constructor: GameState,
 
   /* Deserialization */
-  __restore__: function(obj, env) {
-    /* Let unset fields fall back to at least something */
-    var ret = new GameState(env.game);
-    for (var key in obj) {
-      if (! /^_/.test(key) && obj.hasOwnProperty(key)) ret[key] = obj[key];
-    }
-    return ret;
+  __reinit__: function(env) {
+    this._game = env.game;
   }
 };
 
@@ -443,14 +438,8 @@ Item.prototype = {
   constructor: Item,
 
   /* Deserialize an item */
-  __restore__: function(object, env) {
-    var ret = Object.create(this.prototype);
-    for (var prop in object) {
-      if (! /^_/.test(prop) && object.hasOwnProperty(prop))
-        ret[prop] = object[prop];
-    }
-    ret._game = env.game;
-    return ret;
+  __reinit__: function(env) {
+    this._game = env.game;
   }
 };
 
