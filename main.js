@@ -261,7 +261,7 @@ Game.prototype = {
     var ctor = Item[type];
     // HACK HACK HACK: Behold the finest JS magic!
     var args = [null, this].concat(
-      Array.prototype.slice.apply(arguments, 2));
+      Array.prototype.slice.call(arguments, 2));
     var item = new (ctor.bind.apply(ctor, args))();
     this.state.items[name] = item;
     return item;
@@ -448,7 +448,7 @@ GameUI.prototype = {
 
   /* Get the UI node of an item */
   _getItem: function(name) {
-    if (this._items.hasOwnProperty(name))
+    if (! this._items.hasOwnProperty(name))
       this._items[name] = this.game.state.items[name].render();
     return this._items[name];
   },
@@ -478,7 +478,9 @@ GameUI.prototype = {
 
 /* An Item encapsulates a single object the player can interact with
  * Items must be serializable; hence, non-serializable properties must
- * be prefixed with underscores. */
+ * be prefixed with underscores.
+ * Arguments after game are passed to the __init__ method (if any)
+ * variadically. */
 function Item(game) {
   this._game = game;
   if (this.__init__)
