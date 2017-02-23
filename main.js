@@ -241,16 +241,42 @@ Game.prototype = {
   addTab: function(name, dispname, options) {
     if (! options) options = {};
     options.name = dispname;
+    if (! options.items) options.items = [];
     if (this.state.tabOrder.indexOf(name) == -1)
       this.state.tabOrder.push(name);
     this.state.tabs[name] = options;
     this.ui._addTab(name, dispname, options);
+    this.ui._updateItems(name);
   },
 
   /* Select a UI tab */
   showTab: function(name, hidden, noShow) {
     if (hidden != null) this.state.tabs[name].hidden = hidden;
     this.ui._showTab(name, this.state.tabs[name].hidden, noShow);
+    this.ui._updateItems(name);
+  },
+
+  /* Add an item */
+  addItem: function(type, name) {
+    var ctor = Item[type];
+    // HACK HACK HACK: Behold the finest JS magic!
+    var args = [null, this].concat(
+      Array.prototype.slice.apply(arguments, 2));
+    var item = new (ctor.bind.apply(ctor, args))();
+    this.state.items[name] = item;
+    return item;
+  },
+
+  /* Show an item in a given UI tab, or hide it from there
+   * Items can be in multiple tabs; their nodes are transparently reparented
+   * on tab switches. */
+  showItem: function(name, tab, show) {
+    if (show == null) show = true;
+    var list = this.state.tabs[tab].items;
+    var idx = list.indexOf(name);
+    if (idx != -1) list.splice(idx, 1);
+    if (show) list.push(name);
+    this.ui._updateItems(tab);
   },
 
   /* Stop running the game */
@@ -272,9 +298,12 @@ function GameState(game) {
   this.flags = {};
   // [string]. Stores log messages.
   this.messages = [];
-  // {string -> object}. Name is the codename of a tab; value contains the
-  // display name of the tab (as "name") and, optionally, whether its button
-  // should not be displayed.
+  // {string -> Item}. The home of the items.
+  this.items = {};
+  // {string -> *}. Name is the codename of a tab; value contains the
+  // display name of the tab as "name", the names of the items in this tab as
+  // "items", and, optionally, whether its button should not be displayed as
+  // "hidden".
   this.tabs = {};
   // [string] The order in which the tab buttons should be arranged.
   this.tabOrder = [];
@@ -300,6 +329,7 @@ function GameUI(game) {
   this.parent = null;
   this._tabs = {};
   this._tabButtons = {};
+  this._items = {};
 }
 
 GameUI.prototype = {
@@ -414,6 +444,32 @@ GameUI.prototype = {
     nodes.forEach(function(el) {
       tabbar.appendChild(el);
     });
+  },
+
+  /* Get the UI node of an item */
+  _getItem: function(name) {
+    if (this._items.hasOwnProperty(name))
+      this._items[name] = this.game.state.items[name].render();
+    return this._items[name];
+  },
+
+  /* Ensure all items are correctly present in a tab */
+  _updateItems: function(tabname) {
+    var tabnode = $idx("tab-" + tabname, this.root);
+    var order = this.game.state.tabs[tabname].items;
+    if (order) {
+      order = order.slice();
+    } else {
+      order = [];
+    }
+    order.reverse();
+    var lastNode = null;
+    for (var i = 0; i < order.length; i++) {
+      var node = this._getItem(order[i]);
+      if (node.parentNode != tabnode || node.nextElementSibling != lastNode)
+        tabnode.insertBefore(node, lastNode);
+      lastNode = node;
+    }
   },
 
   /* Consistency */
