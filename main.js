@@ -217,6 +217,14 @@ Game.prototype = {
     return (!! old);
   },
 
+  /* Create a task for addTask
+   * Arguments are passed variadically. */
+  createTask: function(method) {
+    var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Action(m[1], m[2], args, this._env);
+  },
+
   /* Schedule an Action to be run */
   addTaskEx: function(delay, subject, method, args) {
     var task = new Action(subject, method, args, this._env);
@@ -491,7 +499,14 @@ Item.prototype = {
   /* Return the DOM node representing the UI of the item
    * null if none. */
   render: function() {
-    return null;
+    if (this._node === undefined && this._render)
+      this._node = this._render();
+    return this._node;
+  },
+
+  /* Use the item in some specific way */
+  use: function() {
+    /* NOP */
   },
 
   /* OOP and/or serialization */
@@ -529,6 +544,31 @@ Item.defineType = function(name, props) {
   /* Return something */
   return func;
 };
+
+/* A button that submits an Action when clicked.
+ * Function arguments are passed variadically. */
+Item.defineType("Button", {
+  /* Initialize an instance. */
+  __init__: function(text, funcname) {
+    this.text = text;
+    this.funcname = funcname;
+    this.delay = 0;
+    this.args = Array.prototype.slice.call(arguments, 2);
+  },
+
+  /* Render the item into a UI node */
+  _render: function() {
+    var ret = $makeNode("button", "btn", [this.text]);
+    ret.addEventListener("click", this.use.bind(this));
+    return ret;
+  },
+
+  /* Use the item */
+  use: function() {
+    this._game.addTask.apply(this._game,
+      [this.delay, this.funcname].concat(this.args));
+  }
+});
 
 /* *** Initialization *** */
 
