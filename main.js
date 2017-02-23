@@ -425,6 +425,8 @@ GameUI.prototype = {
  * be prefixed with underscores. */
 function Item(game) {
   this._game = game;
+  if (this.__init__)
+    this.__init__.apply(this, Array.prototype.slice.call(arguments, 1));
 }
 
 Item.prototype = {
@@ -441,6 +443,33 @@ Item.prototype = {
   __reinit__: function(env) {
     this._game = env.game;
   }
+};
+
+/* Define an Item subtype
+ * A constructor with the given name is created; (own) properties are copied
+ * from props into the prototype. The constructor and __sername__ properties
+ * are set automatically. */
+Item.defineType = function(name, props) {
+  /* Create constructor function
+   * There seems not to be any method actually supported by reasonably recent
+   * browsers to do that but manual construction. */
+  var func = eval(
+    "(function " + name + "(game) {\n" +
+    "  Item.apply(this, arguments);\n" +
+    "})");
+  /* Create prototype */
+  func.prototype = Object.create(Item.prototype);
+  for (var k in props) {
+    if (props.hasOwnProperty(k))
+      func.prototype[k] = props[k];
+  }
+  /* Add special properties */
+  func.prototype.constructor = func;
+  func.prototype.__sername__ = "Item." + name;
+  /* Install into Item */
+  Item[name] = func;
+  /* Return something */
+  return func;
 };
 
 /* *** Initialization *** */
