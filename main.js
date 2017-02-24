@@ -151,6 +151,17 @@ Variable.prototype = {
     this.value += incr;
   },
 
+  /* Add a handler to the variable */
+  addHandler: function(hnd) {
+    this.handlers.push(hnd);
+  },
+
+  /* Remove a handler form the variable again */
+  removeHandler: function(hnd) {
+    var idx = this.handlers.indexOf(hnd);
+    if (idx != -1) this.handlers.splice(idx, 1);
+  },
+
   /* OOP */
   constructor: Variable
 };
