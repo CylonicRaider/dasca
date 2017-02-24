@@ -161,6 +161,7 @@ function Game(state) {
   this._env.game = this;
   if (state == null) {
     this.state = new GameState(this);
+    this.state.scheduler.addContTask(this.createTask("_updateVars"));
   } else {
     this.state = deserialize(state, this._env);
   }
@@ -232,6 +233,13 @@ Game.prototype = {
     return this.addTaskEx(delay, m[1], m[2], args);
   },
 
+  /* Add a new variable with the given initial value */
+  addVariable: function(name, value) {
+    var ret = new Variable(value);
+    this.state.variables[name] = ret;
+    return ret;
+  },
+
   /* Show a log message */
   showMessage: function(msg) {
     this.state.messages.push(msg);
@@ -285,6 +293,15 @@ Game.prototype = {
     this.running = false;
   },
 
+  /* Update the variables */
+  _updateVars: function(now) {
+    var v = this.state.variables;
+    for (var name in v) {
+      if (! v.hasOwnProperty(name)) continue;
+      v[name].update(now);
+    }
+  },
+
   /* OOP */
   constructor: Game
 };
@@ -317,6 +334,8 @@ GameStory.prototype = {
  * deserialization function (in a suitable environment, which is created by
  * the constructor of Game). */
 function GameState(game) {
+  this._game = game;
+  // Scheduler.
   this.scheduler = Scheduler.makeStrobe(100);
   // {string -> bool}. Can be used to show one-off messages.
   this.flags = {};
@@ -324,16 +343,17 @@ function GameState(game) {
   this.messages = [];
   // {string -> Item}. The home of the items.
   this.items = {};
-  // {string -> *}. Name is the codename of a tab; value contains the
-  // display name of the tab as "name", the names of the items in this tab as
-  // "items", and, optionally, whether its button should not be displayed as
-  // "hidden".
+  // {string -> {string -> *}}. Name is the codename of a tab; value contains
+  // the display name of the tab as "name", the names of the items in this
+  // tab as "items", and, optionally, whether its button should not be
+  // displayed as "hidden".
   this.tabs = {};
   // [string] The order in which the tab buttons should be arranged.
   this.tabOrder = [];
   // string. Contains the codename of the current tab, or null for none.
   this.currentTab = null;
-  this._game = game;
+  // {string -> Variable}. The home of the variables.
+  this.variables = {};
 }
 
 GameState.prototype = {
