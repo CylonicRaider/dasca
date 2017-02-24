@@ -183,6 +183,15 @@ Scheduler.prototype = {
     this.addTask(task, this.clock.now() + delta);
   },
 
+  /* Add a continuous task */
+  addContTask: function(task) {
+    this.contTasks.push(task);
+    if (this.running && this._idle) {
+      this._idle = false;
+      this.requeue(this.run.bind(this));
+    }
+  },
+
   /* Cancel all tasks */
   clear: function() {
     this.tasks.splice(0, this.tasks.length);
