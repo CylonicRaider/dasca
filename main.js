@@ -165,6 +165,7 @@ function Game(state) {
     this.state = deserialize(state, this._env);
   }
   this.ui = new GameUI(this);
+  this.story = new GameStory(this);
   this.running = true;
   this.state.scheduler.run();
 }
@@ -187,15 +188,7 @@ Game.prototype = {
 
   /* Start the game */
   start: function() {
-    this.addTab("start", "Cockpit", {hidden: true});
-    var intro = [[["i", null, "Darkness."], 1],
-                 [["i", null, "Silence."], 3],
-                 [["i", null, "Confinement."], 5],
-                 [["i", null, "Amnesia."], 8]];
-    intro.forEach(function(x) {
-      this.addTask(x[1], "showMessage", x[0]);
-    }, this);
-    this.addTask(10, "showTab", "start");
+    this.story.init();
   },
 
   /* Get the value of a flag */
@@ -294,6 +287,29 @@ Game.prototype = {
 
   /* OOP */
   constructor: Game
+};
+
+/* Story-oriented functionality */
+function GameStory(game) {
+  this.game = game;
+}
+
+GameStory.prototype = {
+  /* Start */
+  init: function() {
+    this.game.addTab("start", "Cockpit", {hidden: true});
+    var intro = [[["i", null, "Darkness."], 1],
+                 [["i", null, "Silence."], 3],
+                 [["i", null, "Confinement."], 5],
+                 [["i", null, "Amnesia."], 8]];
+    intro.forEach(function(x) {
+      this.game.addTask(x[1], "showMessage", x[0]);
+    }, this);
+    this.game.addTask(10, "showTab", "start");
+  },
+
+  /* OOP */
+  constructor: GameStory
 };
 
 /* The (serializable) state of a game
