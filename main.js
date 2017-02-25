@@ -179,6 +179,7 @@ function Game(state) {
   this.ui = new GameUI(this);
   this.story = new GameStory(this);
   this.running = true;
+  this.paused = false;
   this.state.scheduler.run();
 }
 
@@ -299,6 +300,14 @@ Game.prototype = {
     this.ui._updateItems(tab);
   },
 
+  /* Pause the game */
+  pause: function(doPause) {
+    if (doPause == null) doPause = (! this.paused);
+    this.paused = doPause;
+    this.state.scheduler.clock.setScale((doPause) ? 0 : 1);
+    this.ui._updatePause();
+  },
+
   /* Stop running the game */
   exit: function() {
     this.running = false;
@@ -404,9 +413,14 @@ GameUI.prototype = {
         ["div", "row row-small inset", {id: "bottombar"}, [
           ["button", "btn btn-small dim", {id: "credits-game"}, "Credits"],
           ["div", "col col-all"],
+          ["button", "btn btn-small", {id: "pause-game"}, "Pause"],
+          ["hr"],
           ["button", "btn btn-small", {id: "exit-game"}, "Exit"]
         ]]
       ]);
+      $idx("pause-game", this.root).addEventListener("click", function() {
+        this.game.pause();
+      }.bind(this));
       $idx("exit-game", this.root).addEventListener("click", function() {
         this.game.exit();
         showNode("titlescreen");
@@ -424,6 +438,7 @@ GameUI.prototype = {
         if (! state.tabs.hasOwnProperty(key)) continue;
         this._addTab(key, state.tabs[key].name, state.tabs[key]);
       }
+      this._updatePause();
     }
     return this.root;
   },
@@ -525,6 +540,12 @@ GameUI.prototype = {
         tabnode.insertBefore(node, lastNode);
       lastNode = node;
     }
+  },
+
+  /* Update the text of the pause button */
+  _updatePause: function() {
+    var t = (this.game.paused) ? "Resume" : "Pause";
+    $idx("pause-game", this.root).textContent = t;
   },
 
   /* Consistency */
