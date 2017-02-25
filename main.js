@@ -356,7 +356,7 @@ GameStory.prototype = {
 function GameState(game) {
   this._game = game;
   // Scheduler.
-  this.scheduler = Scheduler.makeStrobe(100);
+  this.scheduler = Scheduler.makeStrobe(20);
   // {string -> bool}. Can be used to show one-off messages.
   this.flags = {};
   // [string]. Stores log messages.
