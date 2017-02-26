@@ -381,10 +381,8 @@ Action.prototype = {
   },
 
   /* Deserialize */
-  __restore__: function(data, env) {
-    var ret = new Action(data.self, data.func, data.args, env);
-    if (data.time != null) ret.time = data.time;
-    return ret;
+  __reinit__: function(env) {
+    this.env = env;
   }
 };
 
