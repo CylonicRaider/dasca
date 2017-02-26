@@ -252,12 +252,12 @@ Game.prototype = {
   createTask: function(method) {
     var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
     var args = Array.prototype.slice.call(arguments, 1);
-    return new Action(m[1], m[2], args, this._env);
+    return new CachingAction(m[1], m[2], args, this._env);
   },
 
   /* Schedule an Action to be run */
   addTaskEx: function(delay, subject, method, args) {
-    var task = new Action(subject, method, args, this._env);
+    var task = new CachingAction(subject, method, args, this._env);
     return this.state.scheduler.addTaskIn(task, delay);
   },
 
