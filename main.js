@@ -128,10 +128,15 @@ function hideNodes(node) {
  * variable after each update.
  * If the handler has a rate property, the callback is not invoked, and
  * the change is instead calculated as the product of the time passed and
- * the rate. */
+ * the rate.
+ * Late handlers cannot influence the value of the variable, but instead act
+ * upon its "final" value after the invocation of all "normal" handlers.
+ * Their "run" methods are invoked with the Variable object as the only
+ * argument. */
 function Variable(value) {
   this.value = value;
   this.handlers = [];
+  this.lateHandlers = [];
   this.lastUpdate = null;
 }
 
@@ -142,13 +147,14 @@ Variable.prototype = {
     if (this.lastUpdate == null) this.lastUpdate = now;
     var delta = now - this.lastUpdate, incr = 0, hnd = this.handlers;
     for (var i = 0; i < hnd.length; i++) {
-      if (hdn[i].rate != null) {
+      if (hnd[i].rate != null) {
         incr += hnd[i].rate * delta;
       } else {
         incr += hnd[i].cb(this, delta, now);
       }
     }
     this.value += incr;
+    this.lastUpdate = now;
   },
 
   /* Add a handler to the variable */
@@ -160,6 +166,24 @@ Variable.prototype = {
   removeHandler: function(hnd) {
     var idx = this.handlers.indexOf(hnd);
     if (idx != -1) this.handlers.splice(idx, 1);
+  },
+
+  /* Run the late handlers associated with this variable */
+  runLateHandlers: function() {
+    var hnd = this.lateHandlers;
+    for (var i = 0; i < hnd.length; i++)
+      hnd[i].cb(this);
+  },
+
+  /* Add a late handler */
+  addLateHandler: function(hnd) {
+    this.lateHandlers.push(hnd);
+  },
+
+  /* Remove a late handler */
+  removeLateHandler: function(hnd) {
+    var idx = this.lateHandlers.indexOf(hnd);
+    if (idx != -1) this.lateHandlers.splice(idx, 1);
   },
 
   /* OOP */
@@ -319,6 +343,10 @@ Game.prototype = {
     for (var name in v) {
       if (! v.hasOwnProperty(name)) continue;
       v[name].update(now);
+    }
+    for (var name in v) {
+      if (! v.hasOwnProperty(name)) continue;
+      v[name].runLateHandlers();
     }
   },
 
