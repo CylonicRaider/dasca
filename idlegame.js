@@ -354,18 +354,20 @@ function Action(self, func, args, env) {
 Action.prototype = {
   /* Do what is said on the tin
    * Resolve and run the function represented by this object as described
-   * along with the constructor, and return its return value. */
+   * along with the constructor, and return its return value.
+   * Arguments passed to run() are appended to the arguments stored in the
+   * object. */
   run: function() {
     var self = findObject(this.self, this.env);
-    return findObject(this.func, self).apply(self, this.args);
+    var method = findObject(this.func, self);
+    return method.apply(self, this.args.concat(arguments));
   },
 
   /* Scheduler callback
-   * Differently to run(), this method accepts another argument, which is
-   * appended to the arguments passed to the function. */
+   * This method is identical to run(), aside from explicitly declaring
+   * the "now" parameter. */
   cb: function(now) {
-    var self = findObject(this.self, this.env);
-    return findObject(this.func, self).apply(self, this.args.concat([now]));
+    return this.run.apply(this, arguments);
   },
 
   /* OOP boilerplate */
@@ -385,3 +387,30 @@ Action.prototype = {
     return ret;
   }
 };
+
+/* Construct a CachingAction
+ * The class derives from Action, and only differs in caching the self object
+ * and method (under the assumption that those will never change).
+ */
+function CachingAction(self, func, args, env) {
+  Action.apply(this, arguments);
+  this._self = null;
+  this._func = null;
+}
+
+CachingAction.prototype = Object.create(Action.prototype);
+
+/* Run the stored function
+ * Differently to Action.prototype.run, this function caches the object and
+ * the method to invoke. Note that the cache may be invalidated unpredictably
+ * (such as when the object is serialized). */
+CachingAction.prototype.run = function() {
+  if (this._func == null) {
+    this._self = findObject(this.self, this.env);
+    this._func = findObject(this.func, this._self);
+  }
+  return this._func.apply(this._self, this.args.concat(arguments));
+};
+
+/* OOP something */
+CachingAction.prototype.constructor = CachingAction;
