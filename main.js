@@ -377,7 +377,22 @@ GameStory.prototype = {
     intro.forEach(function(x) {
       this.game.addTask(x[1], "showMessage", x[0]);
     }, this);
-    this.game.addTask(10, "showTab", "start", null, null);
+    this.game.addTask(10, "story.showStart");
+  },
+
+  /* Show the first tab */
+  showStart: function() {
+    this.game.addItem("Button", "show-lighter", "Check pockets",
+                      "story.showLighter");
+    this.game.showItem("show-lighter", "start");
+    this.game.showTab("start");
+  },
+
+  /* Show the lighter */
+  showLighter: function() {
+    this.game.showMessage("You find a lighter.");
+    this.game.addItem("Lighter", "lighter", 70, 100);
+    this.game.showItem("lighter", "start");
   },
 
   /* OOP */
