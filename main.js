@@ -722,9 +722,20 @@ Item.defineType("Lighter", {
     if (! fill) fill = 0;
     var v = this._game.addVariable(this.name + "/fill", fill);
     v.maximum = capacity;
-    v.addHandler({rate: 0});
+    v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
     this.burning = false;
+  },
+
+  /* Deplete the lighter's fuel */
+  _deplete: function(variable, delta) {
+    if (! this.burning) return 0;
+    var decr = delta * 10;
+    if (decr > variable.value) {
+      decr = variable.value;
+      this.setBurning(false);
+    }
+    return -decr;
   },
 
   /* Render the item into a UI node */
@@ -742,15 +753,21 @@ Item.defineType("Lighter", {
     return ret;
   },
 
+  /* Obtain the variable associated to this lighter */
+  _getVar: function() {
+    if (this._var == null)
+      this._var = this._game.state.variables[this.name + "/fill"];
+    return this._var;
+  },
+
   /* Update the fill meter */
   _updateMeter: function() {
     /* Update fill meter */
     if (this._meter == null) {
       this._meter = $sel(".item-bar-content", this.render());
     }
-    if (this._var == null)
-      this._var = this._game.state.variables[this.name + "/fill"];
-    var f = Math.round(this._var.value / this._var.maximum * 10000) / 100;
+    var v = this._getVar();
+    var f = Math.round(v.value / v.maximum * 10000) / 100;
     var fill = f + "%";
     if (this._meter.style.width != fill)
       this._meter.style.width = fill;
@@ -767,14 +784,18 @@ Item.defineType("Lighter", {
 
   /* Use the item */
   use: function() {
-    this.burning = (! this.burning);
-    this._updateButton();
-    this._updateMeter();
-    if (this.burning) {
-      this._var.handlers[0].rate = -0.1;
-    } else {
-      this._var.handlers[0].rate = 0;
+    this.setBurning(! this.burning);
+  },
+
+  /* Set the burning state */
+  setBurning: function(state) {
+    var v = this._getVar();
+    if (state && v.value < 1e-6) {
+      this._game.showMessage("The lighter is burnt out.");
+      return;
     }
+    this.burning = state;
+    this._updateButton();
     if (this.burning) {
       if (this._game.setFlag("lighter-space")) {
         this._game.showMessage("The flame looks funny... Oh, right.");
