@@ -6,20 +6,42 @@
 
 /* *** Utilities *** */
 
-/* Shortcut for getElementById */
-function $id(id, ctx) {
-  return (ctx || document).getElementById(id);
+function $id(id) {
+  return document.getElementById(id);
 }
-
-/* Shortcut for querySelector */
-function $sel(sel, ctx) {
-  return (ctx || document).querySelector(sel);
+function $idx(id, elem) {
+  return elem.querySelector("#" + id);
+}
+function $sel(sel, elem) {
+  return (elem || document).querySelector(sel);
+}
+function $selAll(sel, elem) {
+  return (elem || document).querySelectorAll(sel);
 }
 
 /* Create a DOM element */
-function $make(name, className, attrs, children) {
+function $makeNode(tag, className, attrs, children) {
+  /* Allow omitting parameters */
+  if (Array.isArray(className)) {
+    if (! attrs && ! children) {
+      children = className;
+      attrs = null;
+      className = null;
+    }
+  } else if (typeof className == "object" && className != null) {
+    if (! children) {
+      children = attrs;
+      attrs = className;
+      className = null;
+    }
+  } else if (Array.isArray(attrs) || typeof attrs == "string") {
+    if (! children) {
+      children = attrs;
+      attrs = null;
+    }
+  }
   /* Create node */
-  var ret = document.createElement(name);
+  var ret = document.createElement(tag);
   /* Set classes */
   if (className) ret.className = className;
   /* Set additional attributes */
@@ -34,7 +56,9 @@ function $make(name, className, attrs, children) {
     if (typeof children == "string") children = [children];
     for (var i = 0; i < children.length; i++) {
       var e = children[i];
-      if (typeof e == "string") {
+      if (! e) {
+        /* Allow conditional node omission */
+      } else if (typeof e == "string") {
         /* Strings become text nodes */
         ret.appendChild(document.createTextNode(e));
       } else if (typeof e != "object") {
@@ -42,7 +66,7 @@ function $make(name, className, attrs, children) {
         throw new Error("Bad child encountered during DOM node creation");
       } else if (Array.isArray(e)) {
         /* Arrays are handled recursively */
-        ret.appendChild($make.apply(null, e));
+        ret.appendChild($makeNode.apply(null, e));
       } else {
         /* Everything else is assumed to be a DOM node */
         ret.appendChild(e);
@@ -51,507 +75,6 @@ function $make(name, className, attrs, children) {
   }
   return ret;
 }
-
-/* *** Action ***
- * A serializable (and reifiable) function wrapper, usable as a Scheduler
- * task. */
-
-/* Construct a new action
- * name idenfities what to perform, extra may be used to pass additional data
- * to the action, context contains further additional data.
- * While extra is serialized, context is not; thus, name and extra should
- * completely idenfity the action, and context should contain references to
- * objects which are otherwise unattainable. */
-function DascaAction(name, extra, context) {
-  this.name = name;
-  this.extra = extra;
-  this.context = context;
-  if (DascaAction.handlers[name]) {
-    this.cb = DascaAction.handlers[name];
-  } else {
-    throw new Error("Unknown action " + name);
-  }
-}
-
-DascaAction.prototype = {
-  /* OOP helper */
-  constructor: DascaAction,
-
-  /* Serialization hook */
-  __save__: function(action) {
-    return {name: action.name, extra: action.extra || undefined};
-  },
-
-  /* Deserialization hook */
-  __restore__: function(data, context) {
-    return new DascaAction(data.name, data.extra, context);
-  }
-};
-
-/* Collection of handlers for actions */
-DascaAction.handlers = {};
-
-/* Add a handler to the list */
-DascaAction.addHandler = function(name, cb) {
-  DascaAction.handlers[name] = cb;
-};
-
-/* *** Variables ***
- * Each variable has a name and a (mutable) value; when the value is changed
- * via the setter method, callbacks registered for the variable (statically)
- * are invoked, each with "this" set to the variable, and the name, the new,
- * and the old value as arguments.
- * Callbacks are registered statically to aid serialization. */
-
-/* Construct a new variable */
-function Variable(name, value) {
-  this.name = name;
-  this.value = value;
-}
-
-Variable.prototype = {
-  /* Get the value of the variable */
-  get: function() {
-    return this.value;
-  },
-
-  /* Set the value of the variable
-   * If the value changes, callbacks are invoked. */
-  set: function(value) {
-    if (value === this.value) return;
-    var oldVal = this.value;
-    this.value = value;
-    var cbs = callbacks[this.name];
-    if (cbs) {
-      for (var i = 0; i < cbs.length; i++)
-        cbs[i].call(this, this.name, value, oldVal);
-    }
-  },
-
-  /* OOP noise */
-  constructor: Variable
-}
-
-/* Mapping of variable names to values */
-Variable.callbacks = {};
-
-/* Register the given callback for the given variable name */
-Variable.addCallback = function(name, cb) {
-  if (! Variable.callbacks[name])
-    Variable.callbacks[name] = [];
-  if (Variable.callbacks[name].indexOf(cb) == -1)
-    Variable.callbacks[name].push(cb);
-};
-
-/* Deregister the given callback */
-Variable.removeCallback = function(name, cb) {
-  if (! Variable.callbacks[name]) return;
-  var idx = Variable.callbacks[name].indexOf(cb);
-  if (idx != -1) Variable.callbacks[name].splice(idx, 1);
-};
-
-/* *** Game objects *** */
-
-/* Construct a new Game
- * state is either null (to indicate the creation of a fresh game), or a
- * string containing a serialized GameState, which is restored. */
-function Game(state) {
-  this.context = Object.create(window);
-  this.context.game = this;
-  if (state) {
-    this.state = deserialize(state, this.context);
-  } else {
-    this.state = new GameState();
-  }
-  this.ui = new GameUI(this);
-  this.running = true;
-  this.paused = false;
-}
-
-Game.prototype = {
-  /* Save the game state to a string */
-  save: function() {
-    return serialize(this.state);
-  },
-
-  /* Actually commence game here */
-  init: function() {
-    var sched = this.state.scheduler;
-    sched.clock.setTime(0);
-    var texts = [[["i", null, null, "Darkness."], 1],
-                 [["i", null, null, "Silence."], 3],
-                 [["i", null, null, "Confinement."], 5],
-                 [["i", null, null, "Amnesia."], 8]];
-    texts.forEach(function(x) {
-      this.addTask("showMessage", x[0], x[1]);
-    }, this);
-    this.addTask("showTab", "starttab", 10);
-    this.addItem("pockets", "Button", {text: "Check pockets",
-      action: "findLighter"}, "starttab");
-  },
-
-  /* Pause the game */
-  pause: function() {
-    this.paused = true;
-    this.state.scheduler.clock.setScale(0);
-    this.ui._updatePause();
-  },
-
-  /* Unpause the game */
-  unpause: function() {
-    this.paused = false;
-    this.state.scheduler.clock.setScale(1);
-    this.ui._updatePause();
-  },
-
-  /* Create a DascaAction with this game's context as the context */
-  makeTask: function(name, extra) {
-    return new DascaAction(name, extra, this.context);
-  },
-
-  /* Schedule a DascaAction as created by makeTask to be run at time */
-  addTask: function(name, extra, time) {
-    this.state.scheduler.addTask(this.makeTask(name, extra), time);
-  },
-
-  /* Create a new instance of an item */
-  makeItem: function(type, data) {
-    return new Item[type](data, this);
-  },
-
-  /* Create a new item and add it to the given UI tab */
-  addItem: function(name, type, data, tab) {
-    var it = this.makeItem(type, data);
-    it.uitab = tab;
-    this.state.items[name] = it;
-    this.ui._update(it);
-  },
-
-  /* Remove the given item from the given UI tab */
-  removeItem: function(name) {
-    this.ui._remove(this.state.items[name]);
-    delete this.state.items[name];
-  },
-
-  /* Terminate the game */
-  exit: function() {
-    this.running = false;
-    this.state.scheduler.clock.setScale(0);
-    showNode("titlescreen");
-  },
-
-  /* OOP hook */
-  constructor: Game
-};
-
-/* Find the lighter */
-DascaAction.addHandler("findLighter", function() {
-  var game = this.context.game;
-  game.removeItem("pockets");
-  game.ui.showMessage("You find a lighter.");
-  game.addItem("lighter", "Lighter", null, "starttab");
-});
-
-/* Construct a new game state
- * For restoring a saved state, use deserialization. */
-function GameState() {
-  this.scheduler = Scheduler.makeStrobe(100);
-  this.messages = [];
-  this.messagesShown = {};
-  this.currentTab = null;
-  this.items = {};
-}
-
-GameState.prototype = {
-  /* OOP necessity */
-  constructor: GameState
-};
-
-/* Construct a new game UI */
-function GameUI(game) {
-  this.game = game;
-  this.root = null;
-}
-
-GameUI.prototype = {
-  /* Install the game UI into the given node */
-  mount: function(node) {
-    this.root = node;
-    /* Create basic node structure */
-    node.innerHTML = "";
-    node.appendChild($make("div", "row row-all", {id: "gamepane"}, [
-      ["div", "col col-quarter inset", null, [
-        ["div", null, {id: "messagebar"}]
-      ]],
-      ["div", "col col-all", null, [
-        ["div", "row row-small inset", {id: "tabbar"}],
-        ["div", "row row-all inset", null, [
-          ["div", "col-all pane", {id: "mainpane"}, [
-            ["div", "selectable layer", {id: "starttab"}]
-          ]]
-        ]]
-      ]],
-      ["div", "col col-quarter inset", {id: "inventbar"}]
-    ]));
-    node.appendChild($make("div", "row row-small inset", {id: "bottombar"}, [
-      ["button", "btn btn-small dim", {id: "credits-game"}, "Credits"],
-      ["div", "col-all"],
-      ["button", "btn btn-small", {id: "pause-game"}, "Pause"],
-      ["hr"],
-      ["button", "btn btn-small", {id: "exit-game"}, "Exit"]
-    ]));
-    /* Restore state */
-    if (this.game.state.messages.length) {
-      var m = this.game.state.messages;
-      for (var i = 0; i < m.length; i++)
-        this._showMessage(messages[i], true);
-    }
-    var items = this.game.state.items;
-    for (var k in items) {
-      if (! items.hasOwnProperty(k)) continue;
-      this._update(items[k]);
-    }
-    /* Install button handlers */
-    $id("credits-game").addEventListener("click", function() {
-      showNode("creditscreen");
-      this.game.pause();
-    }.bind(this));
-    $id("pause-game").addEventListener("click", function() {
-      if (this.game.paused) {
-        this.game.unpause();
-      } else {
-        this.game.pause();
-      }
-    }.bind(this));
-    $id("exit-game").addEventListener("click", function() {
-      this.game.exit();
-    }.bind(this));
-  },
-
-  /* Adapt the UI to the current pause state of the game */
-  _updatePause: function() {
-    if (this.game.paused) {
-      $id("pause-game").textContent = "Resume";
-    } else {
-      $id("pause-game").textContent = "Pause";
-    }
-  },
-
-  /* Update the given item's UI */
-  _update: function(item) {
-    var node = item.render();
-    var tab = $id(item.uitab);
-    if (node.parentNode != tab)
-      tab.appendChild(node);
-  },
-
-  /* Remove the item from the UI */
-  _remove: function(item) {
-    var node = item.render();
-    if (node.parentNode)
-      node.parentNode.removeChild(node);
-  },
-
-  /* Append a message to the message bar without updating the game state
-   * Used internally. */
-  _showMessage: function(msg) {
-    var msgnode = $make("p", "log-message", null, [msg]);
-    var msgbar = $id("messagebar");
-    msgbar.appendChild(msgnode);
-    msgbar.scrollTop = msgbar.scrollHeight;
-  },
-
-  /* Append a message to the message bar */
-  showMessage: function(msg) {
-    this._showMessage(msg);
-    this.game.state.messages.push(msg);
-  },
-
-  /* Show a message only the first time the given eky is passed */
-  showMessageOnce: function(msg, key) {
-    if (this.game.state.messagesShown[key] || ! key) return;
-    this.game.state.messagesShown[key] = true;
-    this.showMessage(msg);
-  },
-
-  /* Show the given main area tab */
-  showTab: function(tabname) {
-    if (tabname) {
-      showNode(tabname);
-    } else {
-      hideNodes("mainpane");
-    }
-    this.game.state.currentTab = tabname;
-  },
-
-  /* OOP annoyance */
-  constructor: GameUI
-};
-
-/* An item encapsulates an object's state and behavior
- * To avoid the writing burden of JavaScript's OOP, item types are
- * implemented as their prototypes only, with special hook methods for
- * important actions. */
-function Item(type, data, game) {
-  if (Item[type] && ! (this instanceof Item[type]))
-    return new Item[type](type, data, game);
-  this.type = type;
-  this.data = data;
-  this._game = game;
-  if (this.__init__) this.__init__(true);
-}
-
-Item.prototype = {
-  /* Return a user interface for this item, creating it if necessary */
-  render: function() {
-    if (! this._uinode) this._uinode = $make("span");
-    return this._uinode;
-  },
-
-  /* Default value */
-  uitab: null,
-
-  /* OOP shenanigans */
-  consutructor: Item,
-
-  /* Seralize an Item */
-  __save__: function(item) {
-    return {type: item.type, data: item.data};
-  },
-
-  /* Deserialize an Item */
-  __restore__: function(item, context) {
-    var tp = Item[item.type] || Item;
-    var ret = Object.create(tp.prototype);
-    ret.type = item.type;
-    ret.data = item.data;
-    ret._game = context.game;
-    if (ret.__init__) ret.__init__(false);
-    return ret;
-  }
-};
-
-/* Define a new item type
- * name specifies the name of the item class; proto is a property object.
- * All item classes created using this are attributes of Item; name does not
- * include that prefix. The prototype is derived from Item and all enumerable
- * properties of props are copied into it; the __sername__ property is set
- * to allow the deserializer to find the object. The constructor function
- * created is returned. */
-Item.defineType = function(name, props) {
-  /* Create constructor function
-   * Justification: There seems not to be any method actually supported by
-   *                reasonably recent browsers to do that but manual
-   *                construction. */
-  var func = eval(
-    "(function " + name + "(data, game) {\n" +
-    "  Item.call(this, name, data, game);\n" +
-    "})");
-  /* Create prototype */
-  func.prototype = Object.create(Item.prototype);
-  /* Copy properties */
-  for (var k in props) func.prototype[k] = props[k];
-  /* Add special ones */
-  func.prototype.constructor = func;
-  func.prototype.__sername__ = "Item";
-  /* Install into Item */
-  Item[name] = func;
-  /* Return constructor */
-  return func;
-};
-
-/* The first item to encounter is the lighter */
-Item.defineType("Lighter", {
-  /* Initialize */
-  __init__: function(anew) {
-    if (typeof this.data != "object" || this.data == null)
-      this.data = {lit: false, fill: 0.8, introShown: false};
-  },
-
-  /* Render this item to a DOM node */
-  render: function() {
-    if (! this._uinode) {
-      this._uinode = $make("div", "item-card fade-in", {id: "lighter"}, [
-        ["strong", "item-name", null, "Lighter"],
-        ["button", "btn btn-small item-use", null, "..."],
-        ["div", "item-bar", null, [
-          ["div", "item-bar-content"]
-        ]]
-      ]);
-      $sel('.item-use', this._uinode).addEventListener("click",
-        this.use.bind(this));
-    }
-    $sel(".item-use", this._uinode).textContent =
-      (this.data.lit) ? "Extinguish" : "Ignite";
-    $sel(".item-bar-content", this._uinode).style.width =
-      (this.data.fill * 100) + "%";
-    return this._uinode;
-  },
-
-  /* Interact with the item */
-  use: function() {
-    this.data.lit = (! this.data.lit);
-    if (! this.data.introShown) {
-      if (this.data.lit) {
-        this._game.ui.showMessageOnce("The flame looks funny... Oh, right.",
-                                      "intro_flame");
-        this._game.ui.showMessageOnce(["i", null, null, "Lack of gravity."],
-                                      "intro_gravity");
-      } else {
-        this._game.ui.showMessageOnce("It is dark again.", "intro_dark");
-        this.data.introShown = true;
-      }
-    } else {
-      if (this.data.lit) {
-        this._game.ui.showMessageOnce("The flame is blue and spherical.",
-                                      "lighter_on");
-      } else {
-        this._game.ui.showMessageOnce("It is dark again.", "lighter_off");
-      }
-    }
-    this._game.ui._update(this);
-  }
-});
-
-/* Button item */
-Item.defineType("Button", {
-  /* Initialize */
-  __init__: function(anew) {
-    if (typeof this.data != "object" || this.data == null)
-      this.data = {text: "", action: "", extra: null};
-  },
-
-  /* Render this item into a DOM node */
-  render: function() {
-    if (! this._uinode) {
-      this._uinode = $make("button", "btn");
-      this._uinode.addEventListener("click", this.use.bind(this));
-    }
-    this._uinode.textContent = this.data.text;
-    return this._uinode;
-  },
-
-  /* Interact with the item */
-  use: function() {
-    this._game.addTask(this.data.action, this.data.extra, 0);
-  }
-});
-
-/* Handler for showing messages */
-DascaAction.addHandler("showMessage", function() {
-  this.context.game.ui.showMessage(this.extra);
-});
-
-DascaAction.addHandler("showMessageOnce", function() {
-  this.context.game.ui.showMessageOnce(this.extra[0], this.extra[1]);
-});
-
-/* Handler for showing tabs */
-DascaAction.addHandler("showTab", function() {
-  this.context.game.ui.showTab(this.extra);
-});
-
-/* *** UI control *** */
 
 /* Show the given UI element, hiding any siblings and showing all its
  * showable parents */
@@ -575,7 +98,7 @@ function showNode(node) {
   showNode(node.parentNode);
   /* Show node */
   if (node.classList && node.classList.contains("selectable"))
-    node.classList.add("selected");
+      node.classList.add("selected");
 }
 
 /* Hide all selectable children of node
@@ -591,38 +114,727 @@ function hideNodes(node) {
   }
 }
 
-/* *** Static interface *** */
+/* *** Game mechanics *** */
 
-var Dasca = {
-  /* The game last run, or null */
-  game: null
+/* A value changing over time
+ * A variable has a value, and a set of handlers which are invoked on every
+ * update of it that return increments which are applied to the variable
+ * cumulatively.
+ * Handlers are objects whose "cb" method is called with three parameters:
+ * variable: The Variable object.
+ * delta   : The time difference since the last update.
+ * now     : The current time.
+ * The return values are differences whose sum is added to the value of the
+ * variable after each update.
+ * If the handler has a rate property, the callback is not invoked, and
+ * the change is instead calculated as the product of the time passed and
+ * the rate.
+ * Late handlers cannot influence the value of the variable, but instead act
+ * upon its "final" value after the invocation of all "normal" handlers.
+ * Their "run" methods are invoked with the Variable object as the only
+ * argument. */
+function Variable(value) {
+  this.value = value;
+  this.handlers = [];
+  this.lateHandlers = [];
+  this.lastUpdate = null;
+}
+
+Variable.prototype = {
+  /* Aggregate the results of the handlers' return values and increment the
+   * value by them. */
+  update: function(now) {
+    if (this.lastUpdate == null) this.lastUpdate = now;
+    var delta = now - this.lastUpdate, incr = 0, hnd = this.handlers;
+    for (var i = 0; i < hnd.length; i++) {
+      if (hnd[i].rate != null) {
+        incr += hnd[i].rate * delta;
+      } else {
+        incr += hnd[i].cb(this, delta, now);
+      }
+    }
+    this.value += incr;
+    this.lastUpdate = now;
+  },
+
+  /* Add a handler to the variable */
+  addHandler: function(hnd) {
+    this.handlers.push(hnd);
+  },
+
+  /* Remove a handler form the variable again */
+  removeHandler: function(hnd) {
+    var idx = this.handlers.indexOf(hnd);
+    if (idx != -1) this.handlers.splice(idx, 1);
+  },
+
+  /* Run the late handlers associated with this variable */
+  runLateHandlers: function() {
+    var hnd = this.lateHandlers;
+    for (var i = 0; i < hnd.length; i++)
+      hnd[i].cb(this);
+  },
+
+  /* Add a late handler */
+  addLateHandler: function(hnd) {
+    this.lateHandlers.push(hnd);
+  },
+
+  /* Remove a late handler */
+  removeLateHandler: function(hnd) {
+    var idx = this.lateHandlers.indexOf(hnd);
+    if (idx != -1) this.lateHandlers.splice(idx, 1);
+  },
+
+  /* OOP */
+  constructor: Variable
 };
+
+/* The main game object */
+function Game(state) {
+  this._env = Object.create(window);
+  this._env.game = this;
+  if (state == null) {
+    this.state = new GameState(this);
+    this.state.scheduler.addContTask(this.createTask("_updateVars"));
+  } else {
+    this.state = deserialize(state, this._env);
+  }
+  this.ui = new GameUI(this);
+  this.story = new GameStory(this);
+  this.running = true;
+  this.paused = false;
+  this.state.scheduler.run();
+}
+
+Game.prototype = {
+  /* Save the game state into a string */
+  save: function() {
+    return serialize(this.state);
+  },
+
+  /* Mount the game into the given node */
+  mount: function(node) {
+    return this.ui.mount(node);
+  },
+
+  /* Unmount the game from its current parent node, if any */
+  unmount: function() {
+    return this.ui.unmount();
+  },
+
+  /* Start the game */
+  start: function() {
+    this.story.init();
+  },
+
+  /* Get the value of a flag */
+  getFlag: function(name) {
+    return this.state.flags[name];
+  },
+
+  /* Set a flag; return whether the value changed */
+  setFlag: function(name) {
+    var old = this.state.flags[name];
+    this.state.flags[name] = true;
+    return (! old);
+  },
+
+  /* Clear a flag; return whether the value changes */
+  clearFlag: function(name) {
+    var old = this.state.flags[name];
+    this.state.flags[name] = false;
+    return (!! old);
+  },
+
+  /* Create a task for addTask
+   * Arguments are passed as an array. */
+  createTaskEx: function(method, args) {
+    var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
+    return new CachingAction(m[1], m[2], args, this._env);
+  },
+
+  /* Create a task for addTask
+   * Arguments are passed variadically. */
+  createTask: function(method) {
+    return this.createTaskEx(method,
+      Array.prototype.slice.call(arguments, 1));
+  },
+
+  /* Schedule an Action to be run */
+  addTaskEx: function(delay, subject, method, args) {
+    var task = new CachingAction(subject, method, args, this._env);
+    return this.state.scheduler.addTaskIn(task, delay);
+  },
+
+  /* Convenience wrapper for addTaskEx()
+   * Arguments are passed variadically. */
+  addTask: function(delay, method) {
+    var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
+    var args = Array.prototype.slice.call(arguments, 2);
+    return this.addTaskEx(delay, m[1], m[2], args);
+  },
+
+  /* Add a new variable with the given initial value */
+  addVariable: function(name, value) {
+    var ret = new Variable(value);
+    this.state.variables[name] = ret;
+    return ret;
+  },
+
+  /* Show a log message */
+  showMessage: function(msg) {
+    this.state.messages.push(msg);
+    this.ui._showMessage(msg);
+  },
+
+  /* Add a UI tab */
+  addTab: function(name, dispname, options) {
+    if (! options) options = {};
+    options.name = dispname;
+    if (! options.items) options.items = [];
+    if (this.state.tabOrder.indexOf(name) == -1)
+      this.state.tabOrder.push(name);
+    this.state.tabs[name] = options;
+    this.ui._addTab(name, dispname, options);
+    this.ui._updateItems(name);
+  },
+
+  /* Select a UI tab */
+  showTab: function(name, hidden, noShow) {
+    if (hidden != null) this.state.tabs[name].hidden = hidden;
+    this.ui._showTab(name, this.state.tabs[name].hidden, noShow);
+    this.ui._updateItems(name);
+  },
+
+  /* Add an item */
+  addItem: function(type, name) {
+    var ctor = Item[type];
+    // HACK HACK HACK: Behold the finest JS magic!
+    var args = [null, this].concat(
+      Array.prototype.slice.call(arguments, 1));
+    var item = new (ctor.bind.apply(ctor, args))();
+    this.state.items[name] = item;
+    return item;
+  },
+
+  /* Show an item in a given UI tab, or hide it from there
+   * Items can be in multiple tabs; their nodes are transparently reparented
+   * on tab switches. */
+  showItem: function(name, tab, show) {
+    if (show == null) show = true;
+    var list = this.state.tabs[tab].items;
+    var idx = list.indexOf(name);
+    if (idx != -1) list.splice(idx, 1);
+    if (show) list.push(name);
+    this.ui._updateItems(tab);
+  },
+
+  /* Remove the named item from storage and display */
+  removeItem: function(name) {
+    delete this.state.items[name];
+    for (var t in this.state.tabs) {
+      if (! this.state.tabs.hasOwnProperty(t)) continue;
+      var items = this.state.tabs[t].items;
+      var idx = items.indexOf(name);
+      if (idx != -1) items.splice(idx, 1);
+    }
+    this.ui._removeItem(name);
+  },
+
+  /* Pause the game */
+  pause: function(doPause) {
+    if (doPause == null) doPause = (! this.paused);
+    this.paused = doPause;
+    this.state.scheduler.clock.setScale((doPause) ? 0 : 1);
+    this.ui._updatePause();
+  },
+
+  /* Stop running the game */
+  exit: function() {
+    this.state.scheduler.running = false;
+    this.running = false;
+  },
+
+  /* Update the variables */
+  _updateVars: function(now) {
+    var v = this.state.variables;
+    for (var name in v) {
+      if (! v.hasOwnProperty(name)) continue;
+      v[name].update(now);
+    }
+    for (var name in v) {
+      if (! v.hasOwnProperty(name)) continue;
+      v[name].runLateHandlers();
+    }
+  },
+
+  /* OOP */
+  constructor: Game
+};
+
+/* Story-oriented functionality */
+function GameStory(game) {
+  this.game = game;
+}
+
+GameStory.prototype = {
+  /* Start */
+  init: function() {
+    this.game.addTab("start", "Cockpit", {hidden: true});
+    var intro = [[["i", null, "Darkness."], 1],
+                 [["i", null, "Silence."], 3],
+                 [["i", null, "Confinement."], 5],
+                 [["i", null, "Amnesia."], 8]];
+    intro.forEach(function(x) {
+      this.game.addTask(x[1], "showMessage", x[0]);
+    }, this);
+    this.game.addTask(10, "story.showStart");
+  },
+
+  /* Show the first tab */
+  showStart: function() {
+    this.game.addItem("Button", "show-lighter", "Check pockets",
+                      "story.showLighter");
+    this.game.showItem("show-lighter", "start");
+    this.game.showTab("start");
+  },
+
+  /* Show the lighter */
+  showLighter: function() {
+    this.game.removeItem("show-lighter");
+    this.game.showMessage("You find a lighter.");
+    this.game.addItem("Lighter", "lighter", 100, 70);
+    this.game.showItem("lighter", "start");
+  },
+
+  /* OOP */
+  constructor: GameStory
+};
+
+/* The (serializable) state of a game
+ * The constructor creates a new state; for restoring a saved one, use the
+ * deserialization function (in a suitable environment, which is created by
+ * the constructor of Game). */
+function GameState(game) {
+  this._game = game;
+  // Scheduler.
+  this.scheduler = Scheduler.makeStrobe(20);
+  // {string -> bool}. Can be used to show one-off messages.
+  this.flags = {};
+  // [string]. Stores log messages.
+  this.messages = [];
+  // {string -> Item}. The home of the items.
+  this.items = {};
+  // {string -> {string -> *}}. Name is the codename of a tab; value contains
+  // the display name of the tab as "name", the names of the items in this
+  // tab as "items", and, optionally, whether its button should not be
+  // displayed as "hidden".
+  this.tabs = {};
+  // [string] The order in which the tab buttons should be arranged.
+  this.tabOrder = [];
+  // string. Contains the codename of the current tab, or null for none.
+  this.currentTab = null;
+  // {string -> Variable}. The home of the variables.
+  this.variables = {};
+}
+
+GameState.prototype = {
+  /* OOP */
+  constructor: GameState,
+
+  /* Deserialization */
+  __reinit__: function(env) {
+    this._game = env.game;
+  }
+};
+
+/* The DOM-based user interface of the game */
+function GameUI(game) {
+  this.game = game;
+  this.root = null;
+  this.parent = null;
+  this._tabs = {};
+  this._tabButtons = {};
+  this._items = {};
+}
+
+GameUI.prototype = {
+  /* Produce the DOM tree corresponding to this object */
+  render: function() {
+    if (this.root == null) {
+      this.root = $makeNode("div", {id: "game-content"}, [
+        ["div", "row row-all", [
+          ["div", "col col-quarter inset", [
+            ["div", {id: "messagebar"}]
+          ]],
+          ["div", "col col-all", [
+            ["div", "row row-small row-btn inset", {id: "tabbar"}],
+            ["div", "row row-all pane", {id: "mainpane"}]
+          ]]
+        ]],
+        ["div", "row row-small inset", {id: "bottombar"}, [
+          ["button", "btn btn-small dim", {id: "credits-game"}, "Credits"],
+          ["div", "col col-all"],
+          ["button", "btn btn-small", {id: "pause-game"}, "Pause"],
+          ["hr"],
+          ["button", "btn btn-small", {id: "exit-game"}, "Exit"]
+        ]]
+      ]);
+      $idx("pause-game", this.root).addEventListener("click", function() {
+        this.game.pause();
+      }.bind(this));
+      $idx("exit-game", this.root).addEventListener("click", function() {
+        this.game.exit();
+        showNode("titlescreen");
+      }.bind(this));
+      $idx("credits-game", this.root).addEventListener("click", function() {
+        showNode("creditscreen");
+      });
+      var state = this.game.state;
+      if (state.messages.length) {
+        var m = state.messages;
+        for (var i = 0; i < m.length; i++)
+          this._showMessage(m[i]);
+      }
+      for (var key in state.tabs) {
+        if (! state.tabs.hasOwnProperty(key)) continue;
+        this._addTab(key, state.tabs[key].name, state.tabs[key]);
+      }
+      this._updatePause();
+    }
+    return this.root;
+  },
+
+  /* Embed the game's UI into the given DOM node
+   * If not already done, the UI is constructed. */
+  mount: function(parent) {
+    this.parent = parent;
+    parent.appendChild(this.render());
+    return this.root;
+  },
+
+  /* Remove the game's UI from the given DOM node */
+  unmount: function() {
+    if (! this.root || ! this.parent) return;
+    var oldParent = this.parent;
+    this.parent.removeChild(this.root);
+    this.parent = null;
+    return oldParent;
+  },
+
+  /* Message showing backend */
+  _showMessage: function(text) {
+    var msgnode = $makeNode("p", "log-message", [text]);
+    var msgbar = $idx("messagebar", this.root);
+    msgbar.appendChild(msgnode);
+    msgbar.scrollTop = msgbar.scrollHeight;
+  },
+
+  /* Add a UI tab */
+  _addTab: function(name, dispname, options) {
+    if (! options) options = {};
+    this._tabButtons[name] = $makeNode("button",
+      "btn btn-small fade-in-fast", {id: "tabbtn-" + name}, [dispname]);
+    this._tabButtons[name].addEventListener("click", function() {
+      this.game.showTab(name);
+    }.bind(this));
+    var tabbar = $idx("tabbar", this.root);
+    if (! options.hidden && ! tabbar.contains(this._tabButtons[name])) {
+      $idx("tabbar", this.root).appendChild(this._tabButtons[name]);
+      this._sortTabs();
+    }
+    this._tabs[name] = $makeNode("div", "selectable layer inset game-tab",
+      {id: "tab-" + name});
+    $idx("mainpane", this.root).appendChild(this._tabs[name]);
+  },
+
+  /* Show a UI tab */
+  _showTab: function(name, hidden, noShow) {
+    var tabbtn = this._tabButtons[name];
+    var tabbar = $idx("tabbar", this.root);
+    if (! hidden && ! tabbar.contains(tabbtn)) {
+      tabbar.appendChild(tabbtn);
+      this._sortTabs();
+    }
+    if (! noShow)
+      showNode(this._tabs[name]);
+  },
+
+  /* Ensure the UI tab buttons are in the correct order */
+  _sortTabs: function() {
+    var indices = {}, order = this.game.state.tabOrder;
+    for (var i = 0; i < order.length; i++)
+      indices[order[i]] = i + 1;
+    var last = order.length + 1;
+    var tabbar = $idx("tabbar", this.root);
+    var nodes = Array.prototype.slice.call(tabbar.children);
+    nodes.sort(function(a, b) {
+      var ka = indices[a.id.replace(/^tabbtn-/, "")] || last;
+      var kb = indices[b.id.replace(/^tabbtn-/, "")] || last;
+      return (ka < kb) ? -1 : (ka > kb) ? 1 : 0;
+    });
+    nodes.forEach(function(el) {
+      tabbar.appendChild(el);
+    });
+  },
+
+  /* Get the UI node of an item */
+  _getItem: function(name) {
+    if (! this._items.hasOwnProperty(name))
+      this._items[name] = this.game.state.items[name].render();
+    return this._items[name];
+  },
+
+  /* Ensure all items are correctly present in a tab */
+  _updateItems: function(tabname) {
+    var tabnode = $idx("tab-" + tabname, this.root);
+    var order = this.game.state.tabs[tabname].items;
+    if (order) {
+      order = order.slice();
+    } else {
+      order = [];
+    }
+    order.reverse();
+    var lastNode = null;
+    for (var i = 0; i < order.length; i++) {
+      var node = this._getItem(order[i]);
+      if (node.parentNode != tabnode || node.nextElementSibling != lastNode)
+        tabnode.insertBefore(node, lastNode);
+      lastNode = node;
+    }
+  },
+
+  /* Remove the named item again */
+  _removeItem: function(name) {
+    var it = this._items[name];
+    if (it) it.parentNode.removeChild(it);
+    delete this._items[name];
+  },
+
+  /* Update the text of the pause button */
+  _updatePause: function() {
+    var t = (this.game.paused) ? "Resume" : "Pause";
+    $idx("pause-game", this.root).textContent = t;
+  },
+
+  /* Consistency */
+  constructor: GameUI
+};
+
+/* An Item encapsulates a single object the player can interact with
+ * Items must be serializable; hence, non-serializable properties must
+ * be prefixed with underscores.
+ * Arguments after game are passed to the __init__ method (if any)
+ * variadically. */
+function Item(game, name) {
+  this._game = game;
+  this.name = name;
+  if (this.__init__)
+    this.__init__.apply(this, Array.prototype.slice.call(arguments, 2));
+}
+
+Item.prototype = {
+  /* Return the DOM node representing the UI of the item
+   * null if none. */
+  render: function() {
+    if (this._node === undefined && this._render)
+      this._node = this._render();
+    return this._node;
+  },
+
+  /* Use the item in some specific way */
+  use: function() {
+    /* NOP */
+  },
+
+  /* Return a wrapper around a method of this item */
+  _makeAction: function(method) {
+    return this._game.createTaskEx("state.items." + this.name + "." + method,
+      Array.prototype.slice.call(arguments, 1));
+  },
+
+  /* OOP and/or serialization */
+  constructor: Item,
+
+  /* Deserialize an item */
+  __reinit__: function(env) {
+    this._game = env.game;
+  }
+};
+
+/* Define an Item subtype
+ * A constructor with the given name is created; (own) properties are copied
+ * from props into the prototype. The constructor and __sername__ properties
+ * are set automatically. */
+Item.defineType = function(name, props) {
+  /* Create constructor function
+   * There seems not to be any method actually supported by reasonably recent
+   * browsers to do that but manual construction. */
+  var func = eval(
+    "(function " + name + "(game, name) {\n" +
+    "  Item.apply(this, arguments);\n" +
+    "})");
+  /* Create prototype */
+  func.prototype = Object.create(Item.prototype);
+  for (var k in props) {
+    if (props.hasOwnProperty(k))
+      func.prototype[k] = props[k];
+  }
+  /* Add special properties */
+  func.prototype.constructor = func;
+  func.prototype.__sername__ = "Item." + name;
+  /* Install into Item */
+  Item[name] = func;
+  /* Return something */
+  return func;
+};
+
+/* A button that submits an Action when clicked.
+ * Function arguments are passed variadically. */
+Item.defineType("Button", {
+  /* Initialize an instance. */
+  __init__: function(text, funcname) {
+    this.text = text;
+    this.funcname = funcname;
+    this.delay = 0;
+    this.args = Array.prototype.slice.call(arguments, 2);
+  },
+
+  /* Render the item into a UI node */
+  _render: function() {
+    var ret = $makeNode("button", "btn", [this.text]);
+    ret.addEventListener("click", this.use.bind(this));
+    return ret;
+  },
+
+  /* Use the item */
+  use: function() {
+    this._game.addTask.apply(this._game,
+      [this.delay, this.funcname].concat(this.args));
+  }
+});
+
+/* The lighter */
+Item.defineType("Lighter", {
+  /* Initialize instance */
+  __init__: function(capacity, fill) {
+    if (! fill) fill = 0;
+    var v = this._game.addVariable(this.name + "/fill", fill);
+    v.maximum = capacity;
+    v.addHandler(this._makeAction("_deplete"));
+    v.addLateHandler(this._makeAction("_updateMeter"));
+    this.burning = false;
+  },
+
+  /* Deplete the lighter's fuel */
+  _deplete: function(variable, delta) {
+    if (! this.burning) return 0;
+    var decr = delta * 0.1;
+    if (decr > variable.value) {
+      decr = variable.value;
+      this.setBurning(false);
+    }
+    return -decr;
+  },
+
+  /* Render the item into a UI node */
+  _render: function() {
+    var ret = $makeNode("div", "item-card fade-in", [
+      ["b", "item-name", "Lighter"],
+      ["button", "btn btn-small item-use", "..."],
+      ["div", "item-bar", [["div", "item-bar-content"]]]
+    ]);
+    $sel(".item-use", ret).addEventListener("click", this.use.bind(this));
+    this._meter = $sel(".item-bar-content", ret);
+    this._button = $sel(".item-use", ret);
+    this._updateMeter();
+    this._updateButton();
+    return ret;
+  },
+
+  /* Obtain the variable associated to this lighter */
+  _getVar: function() {
+    if (this._var == null)
+      this._var = this._game.state.variables[this.name + "/fill"];
+    return this._var;
+  },
+
+  /* Update the fill meter */
+  _updateMeter: function() {
+    /* Update fill meter */
+    if (this._meter == null) {
+      this._meter = $sel(".item-bar-content", this.render());
+    }
+    var v = this._getVar();
+    var f = Math.round(v.value / v.maximum * 10000) / 100;
+    var fill = f + "%";
+    if (this._meter.style.width != fill)
+      this._meter.style.width = fill;
+  },
+
+  /* Update the action button */
+  _updateButton: function() {
+    if (this._button == null)
+      this._button = $sel(".item-use", this.render());
+    var text = (this.burning) ? "Extinguish" : "Ignite";
+    if (this._button.textContent != text)
+      this._button.textContent = text;
+  },
+
+  /* Use the item */
+  use: function() {
+    this.setBurning(! this.burning);
+  },
+
+  /* Set the burning state */
+  setBurning: function(state) {
+    var v = this._getVar();
+    if (state && v.value < 1e-6) {
+      this._game.showMessage("The lighter is burnt out.");
+      return;
+    }
+    this.burning = state;
+    this._updateButton();
+    if (this.burning) {
+      if (this._game.setFlag("lighter-space")) {
+        this._game.showMessage("The flame looks funny... Oh, right.");
+        this._game.showMessage(["i", null, "Lack of gravity."]);
+      }
+      this._game.showMessage("The flame is blue and spherical.");
+    } else {
+      this._game.showMessage("It is dark again.");
+    }
+  }
+});
 
 /* *** Initialization *** */
 
+var Dasca = {
+  game: null
+};
+
 function init() {
-  var game;
-  showNode("titlescreen");
+  var game = null;
   $id("startgame").addEventListener("click", function() {
+    if (game) game.unmount();
     game = new Game();
     Dasca.game = game;
-    game.ui.mount($id("mainscreen"));
+    game.mount($id("mainscreen"));
+    game.start();
     showNode("mainscreen");
-    game.init();
   });
   $id("credits-title").addEventListener("click", function() {
     showNode("creditscreen");
-    if (game) game.pause();
   });
   $id("back-credits").addEventListener("click", function() {
     if (game && game.running) {
-      game.unpause();
       showNode("mainscreen");
     } else {
       showNode("titlescreen");
     }
   });
+  showNode("titlescreen");
 }
 
-/* Install load handler */
 window.addEventListener("load", init);

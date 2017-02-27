@@ -16,7 +16,7 @@ body, #game {
   font: 5vmin/1.2 serif;
 }
 
-#game, .layer {
+#game, #game-content, .layer {
   position: absolute;
   top: 0;
   left: 0;
@@ -110,7 +110,7 @@ h1 {
   color: #c000c0;
 }
 
-#mainscreen {
+#mainscreen, #game-content {
   display: flex;
   flex-direction: column;
 }
@@ -137,6 +137,12 @@ h1 {
 }
 #mainscreen .inset {
   padding: 0.5em;
+}
+#mainscreen .row-small.inset {
+  padding: 0.6666666666666666em;
+}
+#mainscreen .row-btn > .btn + .btn {
+  margin-left: 0.5em;
 }
 #mainscreen .row > hr {
   margin: 0 0.25em;
@@ -166,9 +172,14 @@ h1 {
   to { opacity: 1; }
 }
 
+.game-tab > .btn {
+  margin: 0 0 0.25em;
+}
+
 .item-card {
   display: flex;
   flex-wrap: wrap;
+  margin-bottom: 0.25em;
 }
 .item-card .item-name {
   flex-grow: 1;
@@ -187,6 +198,9 @@ h1 {
 .fade-in {
   animation: fade-in 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
 }
+.fade-in-fast {
+  animation: fade-in 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
+}
 
 .dim {
   opacity: 0.5;
@@ -196,13 +210,13 @@ h1 {
   visibility: visible;
   opacity: 1;
   transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
-                visibility 100ms step-start;
+              visibility 100ms step-start;
 }
 .hidable.hidden {
   visibility: hidden;
   opacity: 0;
   transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
-                visibility 100ms step-end;
+              visibility 100ms step-end;
 }
 :not(.hidable).hidden {
   display: none;

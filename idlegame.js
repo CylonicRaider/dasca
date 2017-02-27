@@ -69,9 +69,9 @@ Clock.prototype = {
   constructor: Clock,
 
   /* Seralize */
-  __save__: function(clock) {
-    if (! clock._realTime) throw new Error("Clock not serializable!");
-    return {scale: clock.scale, time: clock.now()};
+  __save__: function() {
+    if (! this._realTime) throw new Error("Clock not serializable!");
+    return {scale: this.scale, time: this.now()};
   },
 
   /* Deserialize */
@@ -84,7 +84,8 @@ Clock.prototype = {
  * The clock counts from zero */
 Clock.realTime = function(scale, start) {
   if (scale == null) scale = 1.0;
-  var offset = (start == null) ? null : start - performance.now() * scale;
+  var offset = null;
+  if (start != null) offset = start - performance.now() / 1000.0 * scale;
   var ret = new Clock(function() {
     return performance.now() / 1000.0;
   }, scale, offset);
@@ -182,6 +183,15 @@ Scheduler.prototype = {
     this.addTask(task, this.clock.now() + delta);
   },
 
+  /* Add a continuous task */
+  addContTask: function(task) {
+    this.contTasks.push(task);
+    if (this.running && this._idle) {
+      this._idle = false;
+      this.requeue(this.run.bind(this));
+    }
+  },
+
   /* Cancel all tasks */
   clear: function() {
     this.tasks.splice(0, this.tasks.length);
@@ -191,13 +201,13 @@ Scheduler.prototype = {
   constructor: Scheduler,
 
   /* Prepare for serializing a Scheduler */
-  __save__: function(sched) {
-    var ret = {type: sched._type, tasks: sched.tasks,
-               contTasks: sched.contTasks, clock: sched.clock,
-               running: sched.running};
-    if (sched._type == "strobe") {
-      ret.fps = sched._fps;
-    } else if (sched._type != "animated") {
+  __save__: function() {
+    var ret = {type: this._type, tasks: this.tasks,
+               contTasks: this.contTasks, clock: this.clock,
+               running: this.running};
+    if (this._type == "strobe") {
+      ret.fps = this._fps;
+    } else if (this._type != "animated") {
       throw new Error("Scheduler not serializable!");
     }
     return ret;
@@ -245,6 +255,16 @@ Scheduler.makeStrobe = function(fps, clock) {
  * When hooks are not used, properties whose names start with underscores (in
  * particular the special properties) are removed. */
 
+/* Resolve a dotted name string to an object */
+function findObject(name, env) {
+  if (env == null) env = window;
+  var cur = env, spl = name.split(".");
+  for (var i = 0; i < spl.length; i++) {
+    cur = cur[spl[i]];
+  }
+  return cur;
+}
+
 /* Serialize an object tree to JSON, storing type information */
 function serialize(obj) {
   return JSON.stringify(obj, function(name, value) {
@@ -262,7 +282,7 @@ function serialize(obj) {
     /* Copy properties into new object, or let object serialize itself */
     var ret;
     if (value.__save__) {
-      ret = value.__save__(value);
+      ret = value.__save__();
     } else {
       ret = {};
       for (var prop in value) {
@@ -286,10 +306,11 @@ function deserialize(obj, env) {
   return JSON.parse(obj, function(name, value) {
     /* Ignore non-objects */
     if (typeof value != "object" || Array.isArray(value)) return value;
+    if (value == null) return null;
     /* Check for a __type__ */
     if (value.__type__) {
       /* Obtain type object */
-      var type = env[value.__type__];
+      var type = findObject(value.__type__, env);
       if (type && type.prototype && type.prototype.__restore__) {
         /* Use restorer function */
         value = type.prototype.__restore__(value, env);
@@ -303,7 +324,93 @@ function deserialize(obj, env) {
         throw new Error("Object not deserializable (cannot find type): " +
                         JSON.stringify(value));
       }
+      /* Allow alternative restoration handler. */
+      if (type && type.prototype && type.prototype.__reinit__)
+        type.prototype.__reinit__.call(value, env);
     }
     return value;
   });
 }
+
+/* *** Action ***
+ * A serializable wrapper around a method call. Can be used as a callback for
+ * Scheduler; for that reason, a property named "time" is serialized and
+ * restored if present. */
+
+/* Construct a new Action
+ * self is the name (!) of an object to be resolved relative to env; func is
+ * the name of a function to be resolved relative to self; args is an array
+ * of arguments. The function is called with the object resolved for self as
+ * the this object and args as the positional arguments.
+ * If args is omitted, an empty array is used; if env is omitted, the global
+ * object (i.e. window) is used. */
+function Action(self, func, args, env) {
+  this.self = self;
+  this.func = func;
+  this.args = args || [];
+  this.env = env || window;
+}
+
+Action.prototype = {
+  /* Do what is said on the tin
+   * Resolve and run the function represented by this object as described
+   * along with the constructor, and return its return value.
+   * Arguments passed to run() are appended to the arguments stored in the
+   * object. */
+  run: function() {
+    var self = findObject(this.self, this.env);
+    var method = findObject(this.func, self);
+    return method.apply(self,
+      Array.prototype.concat.apply(this.args, arguments));
+  },
+
+  /* Scheduler callback
+   * This method is identical to run(), aside from explicitly declaring
+   * the "now" parameter. */
+  cb: function(now) {
+    return this.run.apply(this, arguments);
+  },
+
+  /* OOP boilerplate */
+  constructor: Action,
+
+  /* Prepare for serialization */
+  __save__: function() {
+    var ret = {self: this.self, func: this.func, args: this.args};
+    if (this.time != null) ret.time = this.time;
+    return ret;
+  },
+
+  /* Deserialize */
+  __reinit__: function(env) {
+    this.env = env;
+  }
+};
+
+/* Construct a CachingAction
+ * The class derives from Action, and only differs in caching the self object
+ * and method (under the assumption that those will never change).
+ */
+function CachingAction(self, func, args, env) {
+  Action.apply(this, arguments);
+  this._self = null;
+  this._func = null;
+}
+
+CachingAction.prototype = Object.create(Action.prototype);
+
+/* Run the stored function
+ * Differently to Action.prototype.run, this function caches the object and
+ * the method to invoke. Note that the cache may be invalidated unpredictably
+ * (such as when the object is serialized). */
+CachingAction.prototype.run = function() {
+  if (this._func == null) {
+    this._self = findObject(this.self, this.env);
+    this._func = findObject(this.func, this._self);
+  }
+  return this._func.apply(this._self,
+    Array.prototype.concat.apply(this.args, arguments));
+};
+
+/* OOP something */
+CachingAction.prototype.constructor = CachingAction;
