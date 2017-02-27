@@ -377,7 +377,7 @@ GameStory.prototype = {
     intro.forEach(function(x) {
       this.game.addTask(x[1], "showMessage", x[0]);
     }, this);
-    this.game.addTask(10, "showTab", "start");
+    this.game.addTask(10, "showTab", "start", null, null);
   },
 
   /* OOP */
@@ -686,7 +686,7 @@ Item.defineType("Lighter", {
   __init__: function(capacity, fill) {
     var v = this._game.addVariable(this.name + "/fill", fill);
     v.maximum = capacity;
-    v.addHandler({rate: 0.1});
+    v.addHandler({rate: -0.1});
     v.addLateHandler(this._makeAction("_updateUI"));
   },
 
