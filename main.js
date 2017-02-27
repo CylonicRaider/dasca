@@ -796,6 +796,7 @@ var Dasca = {
 function init() {
   var game = null;
   $id("startgame").addEventListener("click", function() {
+    if (game) game.unmount();
     game = new Game();
     Dasca.game = game;
     game.mount($id("mainscreen"));
