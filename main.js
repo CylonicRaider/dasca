@@ -730,7 +730,7 @@ Item.defineType("Lighter", {
   /* Deplete the lighter's fuel */
   _deplete: function(variable, delta) {
     if (! this.burning) return 0;
-    var decr = delta * 10;
+    var decr = delta * 0.1;
     if (decr > variable.value) {
       decr = variable.value;
       this.setBurning(false);
