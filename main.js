@@ -469,7 +469,7 @@ GameUI.prototype = {
             ["div", {id: "messagebar"}]
           ]],
           ["div", "col col-all", [
-            ["div", "row row-small row-btn vinset", {id: "tabbar"}],
+            ["div", "row row-small row-btn inset", {id: "tabbar"}],
             ["div", "row row-all pane", {id: "mainpane"}]
           ]]
         ]],
@@ -544,7 +544,7 @@ GameUI.prototype = {
       $idx("tabbar", this.root).appendChild(this._tabButtons[name]);
       this._sortTabs();
     }
-    this._tabs[name] = $makeNode("div", "selectable layer",
+    this._tabs[name] = $makeNode("div", "selectable layer inset game-tab",
       {id: "tab-" + name});
     $idx("mainpane", this.root).appendChild(this._tabs[name]);
   },
