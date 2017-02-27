@@ -360,7 +360,8 @@ Action.prototype = {
   run: function() {
     var self = findObject(this.self, this.env);
     var method = findObject(this.func, self);
-    return method.apply(self, this.args.concat(arguments));
+    return method.apply(self,
+      Array.prototype.concat.apply(this.args, arguments));
   },
 
   /* Scheduler callback
@@ -407,7 +408,8 @@ CachingAction.prototype.run = function() {
     this._self = findObject(this.self, this.env);
     this._func = findObject(this.func, this._self);
   }
-  return this._func.apply(this._self, this.args.concat(arguments));
+  return this._func.apply(this._self,
+    Array.prototype.concat.apply(this.args, arguments));
 };
 
 /* OOP something */
