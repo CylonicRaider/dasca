@@ -248,11 +248,17 @@ Game.prototype = {
   },
 
   /* Create a task for addTask
+   * Arguments are passed as an array. */
+  createTaskEx: function(method, args) {
+    var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
+    return new CachingAction(m[1], m[2], args, this._env);
+  },
+
+  /* Create a task for addTask
    * Arguments are passed variadically. */
   createTask: function(method) {
-    var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
-    var args = Array.prototype.slice.call(arguments, 1);
-    return new CachingAction(m[1], m[2], args, this._env);
+    return this.createTaskEx(method,
+      Array.prototype.slice.call(arguments, 1));
   },
 
   /* Schedule an Action to be run */
@@ -604,6 +610,12 @@ Item.prototype = {
   /* Use the item in some specific way */
   use: function() {
     /* NOP */
+  },
+
+  /* Return a wrapper around a method of this item */
+  _makeAction: function(method) {
+    return this._game.createTaskEx("state.items." + this.name + "." + method,
+      Array.prototype.slice.call(arguments, 1));
   },
 
   /* OOP and/or serialization */
