@@ -306,7 +306,7 @@ Game.prototype = {
     var ctor = Item[type];
     // HACK HACK HACK: Behold the finest JS magic!
     var args = [null, this].concat(
-      Array.prototype.slice.call(arguments, 2));
+      Array.prototype.slice.call(arguments, 1));
     var item = new (ctor.bind.apply(ctor, args))();
     this.state.items[name] = item;
     return item;
@@ -585,10 +585,11 @@ GameUI.prototype = {
  * be prefixed with underscores.
  * Arguments after game are passed to the __init__ method (if any)
  * variadically. */
-function Item(game) {
+function Item(game, name) {
   this._game = game;
+  this.name = name;
   if (this.__init__)
-    this.__init__.apply(this, Array.prototype.slice.call(arguments, 1));
+    this.__init__.apply(this, Array.prototype.slice.call(arguments, 2));
 }
 
 Item.prototype = {
@@ -623,7 +624,7 @@ Item.defineType = function(name, props) {
    * There seems not to be any method actually supported by reasonably recent
    * browsers to do that but manual construction. */
   var func = eval(
-    "(function " + name + "(game) {\n" +
+    "(function " + name + "(game, name) {\n" +
     "  Item.apply(this, arguments);\n" +
     "})");
   /* Create prototype */
