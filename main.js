@@ -730,7 +730,8 @@ Item.defineType("Lighter", {
     }
     if (this._var == null)
       this._var = this._game.state.variables[this.name + "/fill"];
-    var fill = (this._var.value / this._var.maximum * 100) + "%";
+    var f = Math.round(this._var.value / this._var.maximum * 10000) / 100;
+    var fill = f + "%";
     if (this._meter.style.width != fill)
       this._meter.style.width = fill;
   },
