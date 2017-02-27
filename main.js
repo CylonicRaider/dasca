@@ -391,7 +391,7 @@ GameStory.prototype = {
   /* Show the lighter */
   showLighter: function() {
     this.game.showMessage("You find a lighter.");
-    this.game.addItem("Lighter", "lighter", 70, 100);
+    this.game.addItem("Lighter", "lighter", 100, 70);
     this.game.showItem("lighter", "start");
   },
 
@@ -699,10 +699,12 @@ Item.defineType("Button", {
 Item.defineType("Lighter", {
   /* Initialize instance */
   __init__: function(capacity, fill) {
+    if (! fill) fill = 0;
     var v = this._game.addVariable(this.name + "/fill", fill);
     v.maximum = capacity;
-    v.addHandler({rate: -0.1});
-    v.addLateHandler(this._makeAction("_updateUI"));
+    v.addHandler({rate: 0});
+    v.addLateHandler(this._makeAction("_updateMeter"));
+    this.burning = false;
   },
 
   /* Render the item into a UI node */
@@ -714,12 +716,15 @@ Item.defineType("Lighter", {
     ]);
     $sel(".item-use", ret).addEventListener("click", this.use.bind(this));
     this._meter = $sel(".item-bar-content", ret);
-    this._updateUI();
+    this._button = $sel(".item-use", ret);
+    this._updateMeter();
+    this._updateButton();
     return ret;
   },
 
   /* Update the fill meter */
-  _updateUI: function() {
+  _updateMeter: function() {
+    /* Update fill meter */
     if (this._meter == null) {
       this._meter = $sel(".item-bar-content", this.render());
     }
@@ -728,6 +733,27 @@ Item.defineType("Lighter", {
     var fill = (this._var.value / this._var.maximum * 100) + "%";
     if (this._meter.style.width != fill)
       this._meter.style.width = fill;
+  },
+
+  /* Update the action button */
+  _updateButton: function() {
+    if (this._button == null)
+      this._button = $sel(".item-use", this.render());
+    var text = (this.burning) ? "Extinguish" : "Ignite";
+    if (this._button.textContent != text)
+      this._button.textContent = text;
+  },
+
+  /* Use the item */
+  use: function() {
+    this.burning = (! this.burning);
+    this._updateButton();
+    this._updateMeter();
+    if (this.burning) {
+      this._var.handlers[0].rate = -0.1;
+    } else {
+      this._var.handlers[0].rate = 0;
+    }
   }
 });
 
