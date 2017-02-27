@@ -330,6 +330,18 @@ Game.prototype = {
     this.ui._updateItems(tab);
   },
 
+  /* Remove the named item from storage and display */
+  removeItem: function(name) {
+    delete this.state.items[name];
+    for (var t in this.state.tabs) {
+      if (! this.state.tabs.hasOwnProperty(t)) continue;
+      var items = this.state.tabs[t].items;
+      var idx = items.indexOf(name);
+      if (idx != -1) items.splice(idx, 1);
+    }
+    this.ui._removeItem(name);
+  },
+
   /* Pause the game */
   pause: function(doPause) {
     if (doPause == null) doPause = (! this.paused);
@@ -390,6 +402,7 @@ GameStory.prototype = {
 
   /* Show the lighter */
   showLighter: function() {
+    this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
     this.game.addItem("Lighter", "lighter", 100, 70);
     this.game.showItem("lighter", "start");
@@ -590,6 +603,13 @@ GameUI.prototype = {
         tabnode.insertBefore(node, lastNode);
       lastNode = node;
     }
+  },
+
+  /* Remove the named item again */
+  _removeItem: function(name) {
+    var it = this._items[name];
+    if (it) it.parentNode.removeChild(it);
+    delete this._items[name];
   },
 
   /* Update the text of the pause button */
