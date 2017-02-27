@@ -340,6 +340,7 @@ Game.prototype = {
 
   /* Stop running the game */
   exit: function() {
+    this.state.scheduler.running = false;
     this.running = false;
   },
 
@@ -676,6 +677,42 @@ Item.defineType("Button", {
   use: function() {
     this._game.addTask.apply(this._game,
       [this.delay, this.funcname].concat(this.args));
+  }
+});
+
+/* The lighter */
+Item.defineType("Lighter", {
+  /* Initialize instance */
+  __init__: function(capacity, fill) {
+    var v = this._game.addVariable(this.name + "/fill", fill);
+    v.maximum = capacity;
+    v.addHandler({rate: 0.1});
+    v.addLateHandler(this._makeAction("_updateUI"));
+  },
+
+  /* Render the item into a UI node */
+  _render: function() {
+    var ret = $makeNode("div", "item-card fade-in", [
+      ["b", "item-name", "Lighter"],
+      ["button", "btn btn-small item-use", "..."],
+      ["div", "item-bar", [["div", "item-bar-content"]]]
+    ]);
+    $sel(".item-use", ret).addEventListener("click", this.use.bind(this));
+    this._meter = $sel(".item-bar-content", ret);
+    this._updateUI();
+    return ret;
+  },
+
+  /* Update the fill meter */
+  _updateUI: function() {
+    if (this._meter == null) {
+      this._meter = $sel(".item-bar-content", this.render());
+    }
+    if (this._var == null)
+      this._var = this._game.state.variables[this.name + "/fill"];
+    var fill = (this._var.value / this._var.maximum * 100) + "%";
+    if (this._meter.style.width != fill)
+      this._meter.style.width = fill;
   }
 });
 
