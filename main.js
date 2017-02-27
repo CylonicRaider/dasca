@@ -775,6 +775,15 @@ Item.defineType("Lighter", {
     } else {
       this._var.handlers[0].rate = 0;
     }
+    if (this.burning) {
+      if (this._game.setFlag("lighter-space")) {
+        this._game.showMessage("The flame looks funny... Oh, right.");
+        this._game.showMessage(["i", null, "Lack of gravity."]);
+      }
+      this._game.showMessage("The flame is blue and spherical.");
+    } else {
+      this._game.showMessage("It is dark again.");
+    }
   }
 });
 
