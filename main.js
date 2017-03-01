@@ -330,6 +330,12 @@ Game.prototype = {
     this.ui._updateItems(tab);
   },
 
+  /* Hide the given item from sight */
+  hideItem: function(name, tab) {
+    /* Actually already implemented */
+    this.showItem(name, tab, false);
+  },
+
   /* Remove the named item from storage and display */
   removeItem: function(name) {
     delete this.state.items[name];
