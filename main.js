@@ -425,7 +425,7 @@ GameStory.prototype = {
 
   /* Gather first impressions of the player's surroundings */
   lookAround: function() {
-    // I lied.
+    this.game.showTab("start", false);
     this.game.showMessage(["i", null, "NYI."]);
   },
 
