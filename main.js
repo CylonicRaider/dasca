@@ -323,10 +323,10 @@ Game.prototype = {
    * on tab switches. */
   showItem: function(name, tab, show) {
     if (show == null) show = true;
-    var list = this.state.tabs[tab].items;
-    var idx = list.indexOf(name);
-    if (idx != -1) list.splice(idx, 1);
-    if (show) list.push(name);
+    var items = this.state.tabs[tab].items;
+    var idx = items.indexOf(name);
+    if (idx != -1) items.splice(idx, 1);
+    if (show) items.push(name);
     this.ui._updateItems(tab);
   },
 
@@ -608,20 +608,23 @@ GameUI.prototype = {
 
   /* Ensure all items are correctly present in a tab */
   _updateItems: function(tabname) {
-    var tabnode = $idx("tab-" + tabname, this.root);
+    var tabNode = $idx("tab-" + tabname, this.root);
     var order = this.game.state.tabs[tabname].items;
-    if (order) {
-      order = order.slice();
-    } else {
-      order = [];
-    }
+    order = (order) ? order.slice() : [];
     order.reverse();
     var lastNode = null;
     for (var i = 0; i < order.length; i++) {
       var node = this._getItem(order[i]);
-      if (node.parentNode != tabnode || node.nextElementSibling != lastNode)
-        tabnode.insertBefore(node, lastNode);
+      if (node.parentNode != tabNode) {
+        tabNode.insertBefore(node, lastNode);
+      } else if (node.nextElementSibling != lastNode) {
+        tabNode.removeChild(node.nextElementSibling);
+      }
       lastNode = node;
+    }
+    if (lastNode) {
+      while (lastNode.previousElementSibling)
+        tabNode.removeChild(lastNode.previousElementSibling);
     }
   },
 
