@@ -323,11 +323,17 @@ Game.prototype = {
    * on tab switches. */
   showItem: function(name, tab, show) {
     if (show == null) show = true;
-    var list = this.state.tabs[tab].items;
-    var idx = list.indexOf(name);
-    if (idx != -1) list.splice(idx, 1);
-    if (show) list.push(name);
+    var items = this.state.tabs[tab].items;
+    var idx = items.indexOf(name);
+    if (idx != -1) items.splice(idx, 1);
+    if (show) items.push(name);
     this.ui._updateItems(tab);
+  },
+
+  /* Hide the given item from sight */
+  hideItem: function(name, tab) {
+    /* Actually already implemented */
+    this.showItem(name, tab, false);
   },
 
   /* Remove the named item from storage and display */
@@ -381,7 +387,7 @@ function GameStory(game) {
 GameStory.prototype = {
   /* Start */
   init: function() {
-    this.game.addTab("start", "Cockpit", {hidden: true});
+    this.game.addTab("start", "Bridge", {hidden: true});
     var intro = [[["i", null, "Darkness."], 1],
                  [["i", null, "Silence."], 3],
                  [["i", null, "Confinement."], 5],
@@ -404,8 +410,23 @@ GameStory.prototype = {
   showLighter: function() {
     this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
-    this.game.addItem("Lighter", "lighter", 100, 70);
+    var lighter = this.game.addItem("Lighter", "lighter", 100, 70);
+    lighter.onchange = this.game.createTask("story.onlighterchange");
     this.game.showItem("lighter", "start");
+    var btn = this.game.addItem("Button", "look-around", "Look around",
+                                "story.lookAround");
+    btn.classes = "fade-in";
+  },
+
+  /* Called when the burning state of the lighter changes */
+  onlighterchange: function(lighter) {
+    this.game.showItem("look-around", "start", lighter.burning);
+  },
+
+  /* Gather first impressions of the player's surroundings */
+  lookAround: function() {
+    this.game.showTab("start", false);
+    this.game.showMessage(["i", null, "NYI."]);
   },
 
   /* OOP */
@@ -588,20 +609,23 @@ GameUI.prototype = {
 
   /* Ensure all items are correctly present in a tab */
   _updateItems: function(tabname) {
-    var tabnode = $idx("tab-" + tabname, this.root);
+    var tabNode = $idx("tab-" + tabname, this.root);
     var order = this.game.state.tabs[tabname].items;
-    if (order) {
-      order = order.slice();
-    } else {
-      order = [];
-    }
+    order = (order) ? order.slice() : [];
     order.reverse();
     var lastNode = null;
     for (var i = 0; i < order.length; i++) {
       var node = this._getItem(order[i]);
-      if (node.parentNode != tabnode || node.nextElementSibling != lastNode)
-        tabnode.insertBefore(node, lastNode);
+      if (node.parentNode != tabNode) {
+        tabNode.insertBefore(node, lastNode);
+      } else if (node.nextElementSibling != lastNode) {
+        tabNode.removeChild(node.nextElementSibling);
+      }
       lastNode = node;
+    }
+    if (lastNode) {
+      while (lastNode.previousElementSibling)
+        tabNode.removeChild(lastNode.previousElementSibling);
     }
   },
 
@@ -698,12 +722,14 @@ Item.defineType("Button", {
     this.text = text;
     this.funcname = funcname;
     this.delay = 0;
+    this.classes = null;
     this.args = Array.prototype.slice.call(arguments, 2);
   },
 
   /* Render the item into a UI node */
   _render: function() {
     var ret = $makeNode("button", "btn", [this.text]);
+    if (this.classes) ret.className += " " + this.classes;
     ret.addEventListener("click", this.use.bind(this));
     return ret;
   },
@@ -725,6 +751,7 @@ Item.defineType("Lighter", {
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
     this.burning = false;
+    this.onchange = null;
   },
 
   /* Deplete the lighter's fuel */
@@ -793,6 +820,8 @@ Item.defineType("Lighter", {
     if (state && v.value < 1e-6) {
       this._game.showMessage("The lighter is burnt out.");
       return;
+    } else if (state == this.burning) {
+      return;
     }
     this.burning = state;
     this._updateButton();
@@ -805,6 +834,7 @@ Item.defineType("Lighter", {
     } else {
       this._game.showMessage("It is dark again.");
     }
+    if (this.onchange) this.onchange.cb(this);
   }
 });
 
