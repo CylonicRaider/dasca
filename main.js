@@ -410,8 +410,22 @@ GameStory.prototype = {
   showLighter: function() {
     this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
-    this.game.addItem("Lighter", "lighter", 100, 70);
+    var lighter = this.game.addItem("Lighter", "lighter", 100, 70);
+    lighter.onchange = this.game.createTask("story.onlighterchange");
     this.game.showItem("lighter", "start");
+    this.game.addItem("Button", "look-around", "Look around",
+                      "story.lookAround");
+  },
+
+  /* Called when the burning state of the lighter changes */
+  onlighterchange: function(lighter) {
+    this.game.showItem("look-around", "start", lighter.burning);
+  },
+
+  /* Gather first impressions of the player's surroundings */
+  lookAround: function() {
+    // I lied.
+    this.game.showMessage(["i", null, "NYI."]);
   },
 
   /* OOP */
@@ -731,6 +745,7 @@ Item.defineType("Lighter", {
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
     this.burning = false;
+    this.onchange = null;
   },
 
   /* Deplete the lighter's fuel */
@@ -799,6 +814,8 @@ Item.defineType("Lighter", {
     if (state && v.value < 1e-6) {
       this._game.showMessage("The lighter is burnt out.");
       return;
+    } else if (state == this.burning) {
+      return;
     }
     this.burning = state;
     this._updateButton();
@@ -811,6 +828,7 @@ Item.defineType("Lighter", {
     } else {
       this._game.showMessage("It is dark again.");
     }
+    if (this.onchange) this.onchange.cb(this);
   }
 });
 
