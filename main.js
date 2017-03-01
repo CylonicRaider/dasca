@@ -381,7 +381,7 @@ function GameStory(game) {
 GameStory.prototype = {
   /* Start */
   init: function() {
-    this.game.addTab("start", "Cockpit", {hidden: true});
+    this.game.addTab("start", "Bridge", {hidden: true});
     var intro = [[["i", null, "Darkness."], 1],
                  [["i", null, "Silence."], 3],
                  [["i", null, "Confinement."], 5],
