@@ -413,8 +413,9 @@ GameStory.prototype = {
     var lighter = this.game.addItem("Lighter", "lighter", 100, 70);
     lighter.onchange = this.game.createTask("story.onlighterchange");
     this.game.showItem("lighter", "start");
-    this.game.addItem("Button", "look-around", "Look around",
-                      "story.lookAround");
+    var btn = this.game.addItem("Button", "look-around", "Look around",
+                                "story.lookAround");
+    btn.classes = "fade-in";
   },
 
   /* Called when the burning state of the lighter changes */
@@ -721,12 +722,14 @@ Item.defineType("Button", {
     this.text = text;
     this.funcname = funcname;
     this.delay = 0;
+    this.classes = null;
     this.args = Array.prototype.slice.call(arguments, 2);
   },
 
   /* Render the item into a UI node */
   _render: function() {
     var ret = $makeNode("button", "btn", [this.text]);
+    if (this.classes) ret.className += " " + this.classes;
     ret.addEventListener("click", this.use.bind(this));
     return ret;
   },
