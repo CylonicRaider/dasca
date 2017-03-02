@@ -399,6 +399,12 @@ function GameStory(game) {
 }
 
 GameStory.prototype = {
+  /* Description of surroundings */
+  DESCRIPTION: [
+    "You are on the bridge of a spacecraft.",
+    ["i", null, "NYI"]
+  ],
+
   /* Start */
   init: function() {
     this.game.addTab("start", "Bridge", {hidden: true});
@@ -434,13 +440,30 @@ GameStory.prototype = {
 
   /* Called when the burning state of the lighter changes */
   onlighterchange: function(lighter) {
-    this.game.showItem("look-around", "start", lighter.burning);
+    if (this.game.state.misc.descIndex == null)
+      this.game.showItem("look-around", "start", lighter.burning);
   },
 
   /* Gather first impressions of the player's surroundings */
   lookAround: function() {
     this.game.showTab("start", false);
-    this.game.showMessage(["i", null, "NYI."]);
+    this.game.hideItem("look-around", "start");
+    this.game.state.misc.descIndex = 0;
+    this.game.state.misc.descTime = null;
+    this.game.addContTask("story._checkDesc");
+  },
+
+  /* Add more description details */
+  _checkDesc: function(now) {
+    var ms = this.game.state.misc;
+    if (ms.descTime == null || ms.descTime <= now) {
+      if (ms.descIndex >= this.DESCRIPTION.length)
+        return true;
+      if (this.game.state.items.lighter.burning) {
+        this.game.showMessage(this.DESCRIPTION[ms.descIndex++]);
+      }
+      ms.descTime = now + 1;
+    }
   },
 
   /* OOP */
@@ -472,6 +495,8 @@ function GameState(game) {
   this.currentTab = null;
   // {string -> Variable}. The home of the variables.
   this.variables = {};
+  // {string -> *}. Miscellaneous values.
+  this.misc = {};
 }
 
 GameState.prototype = {
