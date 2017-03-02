@@ -401,8 +401,15 @@ function GameStory(game) {
 GameStory.prototype = {
   /* Description of surroundings */
   DESCRIPTION: [
-    "You are on the bridge of a spacecraft.",
-    ["i", null, "NYI"]
+    ["You are on the bridge of a spacecraft.", 5],
+    ["The windows would provide a wide panorama onto (presumably) space " +
+      "if they were not blocked by dark shutters.", 8],
+    ["The large instrument panel is lifeless; all needles are resting at " +
+      "zero.", 8],
+    ["You are strapped into a comfortable chair.", 5],
+    ["Behind you, there is a plain wall, pierced by a closed rectangular " +
+      "door, through which a round window peeks into a dark corridor.", 8],
+    [["i", null, "\u2014 T.B.C. \u2014"], 1]
   ],
 
   /* Start */
@@ -460,9 +467,12 @@ GameStory.prototype = {
       if (ms.descIndex >= this.DESCRIPTION.length)
         return true;
       if (this.game.state.items.lighter.burning) {
-        this.game.showMessage(this.DESCRIPTION[ms.descIndex++]);
+        var entry = this.DESCRIPTION[ms.descIndex++];
+        this.game.showMessage(entry[0]);
+        ms.descTime = now + entry[1];
+      } else {
+        ms.descTime = now + 1;
       }
-      ms.descTime = now + 1;
     }
   },
 
