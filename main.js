@@ -275,6 +275,20 @@ Game.prototype = {
     return this.addTaskEx(delay, m[1], m[2], args);
   },
 
+  /* Schedule an Action to be run repeatedly */
+  addContTaskEx: function(subject, method, args) {
+    var task = new CachingAction(subject, method, args, this._env);
+    return this.state.scheduler.addContTask(task);
+  },
+
+  /* Schedule a function to be run repeatedly
+   * Arguments are passed variadically. */
+  addContTask: function(method) {
+    var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
+    var args = Array.prototype.slice.call(arguments, 2);
+    return this.addContTaskEx(m[1], m[2], args);
+  },
+
   /* Add a new variable with the given initial value */
   addVariable: function(name, value) {
     var ret = new Variable(value);
