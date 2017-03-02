@@ -559,8 +559,9 @@ GameUI.prototype = {
         showNode("titlescreen");
       }.bind(this));
       $idx("credits-game", this.root).addEventListener("click", function() {
+        this.game.pause(true);
         showNode("creditscreen");
-      });
+      }.bind(this));
       var state = this.game.state;
       if (state.messages.length) {
         var m = state.messages;
@@ -904,10 +905,12 @@ function init() {
     showNode("mainscreen");
   });
   $id("credits-title").addEventListener("click", function() {
+    if (game) game.pause(true);
     showNode("creditscreen");
   });
   $id("back-credits").addEventListener("click", function() {
     if (game && game.running) {
+      game.pause(false);
       showNode("mainscreen");
     } else {
       showNode("titlescreen");
