@@ -275,6 +275,20 @@ Game.prototype = {
     return this.addTaskEx(delay, m[1], m[2], args);
   },
 
+  /* Schedule an Action to be run repeatedly */
+  addContTaskEx: function(subject, method, args) {
+    var task = new CachingAction(subject, method, args, this._env);
+    return this.state.scheduler.addContTask(task);
+  },
+
+  /* Schedule a function to be run repeatedly
+   * Arguments are passed variadically. */
+  addContTask: function(method) {
+    var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
+    var args = Array.prototype.slice.call(arguments, 2);
+    return this.addContTaskEx(m[1], m[2], args);
+  },
+
   /* Add a new variable with the given initial value */
   addVariable: function(name, value) {
     var ret = new Variable(value);
@@ -385,6 +399,19 @@ function GameStory(game) {
 }
 
 GameStory.prototype = {
+  /* Description of surroundings */
+  DESCRIPTION: [
+    ["You are on the bridge of a spacecraft.", 5],
+    ["The windows would provide a wide panorama onto (presumably) space " +
+      "if they were not blocked by dark shutters.", 8],
+    ["The large instrument panel is lifeless; all needles are resting at " +
+      "zero.", 8],
+    ["You are strapped into a comfortable chair.", 5],
+    ["Behind you, there is a plain wall, pierced by a closed rectangular " +
+      "door, through which a round window peeks into a dark corridor.", 8],
+    [["i", null, "\u2014 T.B.C. \u2014"], 1]
+  ],
+
   /* Start */
   init: function() {
     this.game.addTab("start", "Bridge", {hidden: true});
@@ -420,13 +447,33 @@ GameStory.prototype = {
 
   /* Called when the burning state of the lighter changes */
   onlighterchange: function(lighter) {
-    this.game.showItem("look-around", "start", lighter.burning);
+    if (this.game.state.misc.descIndex == null)
+      this.game.showItem("look-around", "start", lighter.burning);
   },
 
   /* Gather first impressions of the player's surroundings */
   lookAround: function() {
     this.game.showTab("start", false);
-    this.game.showMessage(["i", null, "NYI."]);
+    this.game.hideItem("look-around", "start");
+    this.game.state.misc.descIndex = 0;
+    this.game.state.misc.descTime = null;
+    this.game.addContTask("story._checkDesc");
+  },
+
+  /* Add more description details */
+  _checkDesc: function(now) {
+    var ms = this.game.state.misc;
+    if (ms.descTime == null || ms.descTime <= now) {
+      if (ms.descIndex >= this.DESCRIPTION.length)
+        return true;
+      if (this.game.state.items.lighter.burning) {
+        var entry = this.DESCRIPTION[ms.descIndex++];
+        this.game.showMessage(entry[0]);
+        ms.descTime = now + entry[1];
+      } else {
+        ms.descTime = now + 1;
+      }
+    }
   },
 
   /* OOP */
@@ -458,6 +505,8 @@ function GameState(game) {
   this.currentTab = null;
   // {string -> Variable}. The home of the variables.
   this.variables = {};
+  // {string -> *}. Miscellaneous values.
+  this.misc = {};
 }
 
 GameState.prototype = {
@@ -486,8 +535,8 @@ GameUI.prototype = {
     if (this.root == null) {
       this.root = $makeNode("div", {id: "game-content"}, [
         ["div", "row row-all", [
-          ["div", "col col-quarter inset", [
-            ["div", {id: "messagebar"}]
+          ["div", "col col-3of10 inset", [
+            ["div", {id: "messagebar", lang: "en-US"}]
           ]],
           ["div", "col col-all", [
             ["div", "row row-small row-btn inset", {id: "tabbar"}],
@@ -510,8 +559,9 @@ GameUI.prototype = {
         showNode("titlescreen");
       }.bind(this));
       $idx("credits-game", this.root).addEventListener("click", function() {
+        this.game.pause(true);
         showNode("creditscreen");
-      });
+      }.bind(this));
       var state = this.game.state;
       if (state.messages.length) {
         var m = state.messages;
@@ -855,10 +905,12 @@ function init() {
     showNode("mainscreen");
   });
   $id("credits-title").addEventListener("click", function() {
+    if (game) game.pause(true);
     showNode("creditscreen");
   });
   $id("back-credits").addEventListener("click", function() {
     if (game && game.running) {
+      game.pause(false);
       showNode("mainscreen");
     } else {
       showNode("titlescreen");

@@ -99,14 +99,14 @@ Clock.realTime = function(scale, start) {
 
 /* Construct a new scheduler
  * requeue is a funtion that somehow ("magically") ensures the function
- * to it is asynchronously called again some short time later; tasks is an
- * ordered array of objects whose "time" property is used to determine when
- * they are to run; contTasks is an array of tasks to be run continuously,
- * i.e. at every call of run() (the same semantics as for tasks apply); clock
- * is a Clock instance determining the time this instance works with. The
- * "running" property is set to true; it can be used to stop the Scheduler.
- * To start it, ensure the "running" property is true and call the run()
- * method. */
+ * passed to it is asynchronously called again some short time later; tasks
+ * is an ordered array of objects whose "time" property is used to determine
+ * when they are to run; contTasks is an array of tasks to be run
+ * continuously, i.e. at every call of run(), until they return a true value,
+ * at which point they are removed; clock is a Clock instance determining the
+ * time this instance works with. The "running" property is set to true; it
+ * can be used to stop the Scheduler. To start it, ensure the "running"
+ * property is true and call the run() method. */
 function Scheduler(requeue, tasks, contTasks, clock) {
   if (tasks == null) tasks = [];
   if (contTasks == null) contTasks = [];
@@ -134,12 +134,12 @@ Scheduler.prototype = {
     var now = this.clock.now();
     /* For each task that is (over)due */
     while (this.tasks[0] && this.tasks[0].time <= now) {
-      /* Run it */
       this.runTask(this.tasks.shift(), now);
     }
     /* Run the continuous tasks */
     for (var i = 0; i < this.contTasks.length; i++) {
-      this.runTask(this.contTasks[i], now);
+      if (this.runTask(this.contTasks[i], now))
+        this.contTasks.splice(i--, 1);
     }
     /* Schedule next iteration */
     if (this.tasks.length || this.contTasks.length) {
@@ -155,7 +155,7 @@ Scheduler.prototype = {
    * arguments, and consumes exceptions by logging them to the console. */
   runTask: function(task, now) {
     try {
-      task.cb(now, this);
+      return task.cb(now, this);
     } catch (e) {
       console.error(e);
     }
@@ -183,6 +183,12 @@ Scheduler.prototype = {
     this.addTask(task, this.clock.now() + delta);
   },
 
+  /* Remove a task again */
+  removeTask: function(task) {
+    var idx = this.tasks.indexOf(task);
+    if (idx != -1) this.tasks.splice(idx, 1);
+  },
+
   /* Add a continuous task */
   addContTask: function(task) {
     this.contTasks.push(task);
@@ -190,6 +196,12 @@ Scheduler.prototype = {
       this._idle = false;
       this.requeue(this.run.bind(this));
     }
+  },
+
+  /* Remove a continuous task */
+  removeContTask: function(task) {
+    var idx = this.contTasks.indexOf(task);
+    if (idx != -1) this.contTasks.splice(idx, 1);
   },
 
   /* Cancel all tasks */
