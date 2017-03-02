@@ -535,8 +535,8 @@ GameUI.prototype = {
     if (this.root == null) {
       this.root = $makeNode("div", {id: "game-content"}, [
         ["div", "row row-all", [
-          ["div", "col col-quarter inset", [
-            ["div", {id: "messagebar"}]
+          ["div", "col col-3of10 inset", [
+            ["div", {id: "messagebar", lang: "en-US"}]
           ]],
           ["div", "col col-all", [
             ["div", "row row-small row-btn inset", {id: "tabbar"}],
