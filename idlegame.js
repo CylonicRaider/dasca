@@ -183,6 +183,12 @@ Scheduler.prototype = {
     this.addTask(task, this.clock.now() + delta);
   },
 
+  /* Remove a task again */
+  removeTask: function(task) {
+    var idx = this.tasks.indexOf(task);
+    if (idx != -1) this.tasks.splice(idx, 1);
+  },
+
   /* Add a continuous task */
   addContTask: function(task) {
     this.contTasks.push(task);
@@ -190,6 +196,12 @@ Scheduler.prototype = {
       this._idle = false;
       this.requeue(this.run.bind(this));
     }
+  },
+
+  /* Remove a continuous task */
+  removeContTask: function(task) {
+    var idx = this.contTasks.indexOf(task);
+    if (idx != -1) this.contTasks.splice(idx, 1);
   },
 
   /* Cancel all tasks */
