@@ -682,7 +682,7 @@ GameUI.prototype = {
   /* Remove the named item again */
   _removeItem: function(name) {
     var it = this._items[name];
-    if (it) it.parentNode.removeChild(it);
+    if (it && it.parentNode) it.parentNode.removeChild(it);
     delete this._items[name];
   },
 
