@@ -408,8 +408,7 @@ GameStory.prototype = {
       "zero.", 8],
     ["You are strapped into a comfortable chair.", 5],
     ["Behind you, there is a plain wall, pierced by a closed rectangular " +
-      "door, through which a round window peeks into a dark corridor.", 8],
-    [["i", null, "\u2014 T.B.C. \u2014"], 1]
+      "door, through which a round window peeks into a dark room.", 8]
   ],
 
   /* Start */
@@ -464,8 +463,13 @@ GameStory.prototype = {
   _checkDesc: function(now) {
     var ms = this.game.state.misc;
     if (ms.descTime == null || ms.descTime <= now) {
-      if (ms.descIndex >= this.DESCRIPTION.length)
+      if (ms.descIndex >= this.DESCRIPTION.length) {
+        this.game.removeItem("look-around", "start");
+        this.game.addItem("Button", "pass-door", "Float through door",
+                          "story.goToEngines");
+        this.game.showItem("pass-door", "start");
         return true;
+      }
       if (this.game.state.items.lighter.burning) {
         var entry = this.DESCRIPTION[ms.descIndex++];
         this.game.showMessage(entry[0]);
@@ -474,6 +478,15 @@ GameStory.prototype = {
         ms.descTime = now + 1;
       }
     }
+  },
+
+  /* Move to the next room */
+  goToEngines: function() {
+    this.game.removeItem("pass-door", "start");
+    this.game.addTab("engines", "Engine room");
+    this.game.addItem("Label", "engines-nyi", ["i", null, "\u2014 T.B.C. \u2014"]);
+    this.game.showItem("engines-nyi", "engines");
+    this.game.showTab("engines");
   },
 
   /* OOP */
