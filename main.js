@@ -764,6 +764,19 @@ Item.defineType = function(name, props) {
   return func;
 };
 
+/* A featureless piece of text */
+Item.defineType("Label", {
+  /* Initialize an instance */
+  __init__: function(text) {
+    this.text = text;
+  },
+
+  /* Turn into a UI node */
+  _render: function() {
+    return $makeNode("span", [this.text]);
+  }
+});
+
 /* A button that submits an Action when clicked.
  * Function arguments are passed variadically. */
 Item.defineType("Button", {
