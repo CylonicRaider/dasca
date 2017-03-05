@@ -488,6 +488,7 @@ GameStory.prototype = {
         "bright yellow.");
     this.game.showMessage("You open the door and float through it.");
     this.game.addTab("engines", "Engine room");
+    this.game.showItem("lighter", "engines");
     this.game.addItem("Label", "engines-nyi", ["i", null, "\u2014 T.B.C. \u2014"]);
     this.game.showItem("engines-nyi", "engines");
     this.game.showTab("engines");
