@@ -317,8 +317,8 @@ Game.prototype = {
   /* Select a UI tab */
   showTab: function(name, hidden, noShow) {
     if (hidden != null) this.state.tabs[name].hidden = hidden;
-    this.ui._showTab(name, this.state.tabs[name].hidden, noShow);
     this.ui._updateItems(name);
+    this.ui._showTab(name, this.state.tabs[name].hidden, noShow);
   },
 
   /* Add an item */
@@ -624,7 +624,7 @@ GameUI.prototype = {
   _addTab: function(name, dispname, options) {
     if (! options) options = {};
     this._tabButtons[name] = $makeNode("button",
-      "btn btn-small fade-in-fast", {id: "tabbtn-" + name}, [dispname]);
+      "btn btn-small fade-in", {id: "tabbtn-" + name}, [dispname]);
     this._tabButtons[name].addEventListener("click", function() {
       this.game.showTab(name);
     }.bind(this));
@@ -645,6 +645,13 @@ GameUI.prototype = {
     if (! hidden && ! tabbar.contains(tabbtn)) {
       tabbar.appendChild(tabbtn);
       this._sortTabs();
+    }
+    for (var node = $idx("tab-" + name, this.root).firstElementChild;
+         node; node = node.nextElementSibling) {
+      if (node.classList.contains("fade-in")) {
+        node.classList.remove("fade-in");
+        node.classList.add("fade-in-suppressed");
+      }
     }
     if (! noShow)
       showNode(this._tabs[name]);
@@ -688,6 +695,10 @@ GameUI.prototype = {
         tabNode.insertBefore(node, lastNode);
       } else if (node.nextElementSibling != lastNode) {
         tabNode.removeChild(node.nextElementSibling);
+      }
+      if (node.classList.contains("fade-in-suppressed")) {
+        node.classList.remove("fade-in-suppressed");
+        node.classList.add("fade-in");
       }
       lastNode = node;
     }
