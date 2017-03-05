@@ -437,7 +437,7 @@ GameStory.prototype = {
     this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
     var lighter = this.game.addItem("Lighter", "lighter", 100, 70);
-    lighter.onchange = this.game.createTask("story.onlighterchange");
+    lighter.addChangeListener("story.onlighterchange");
     this.game.showItem("lighter", "start");
     var btn = this.game.addItem("Button", "look-around", "Look around",
                                 "story.lookAround");
@@ -832,7 +832,7 @@ Item.defineType("Lighter", {
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
     this.burning = false;
-    this.onchange = null;
+    this.onchange = [];
   },
 
   /* Deplete the lighter's fuel */
@@ -915,7 +915,16 @@ Item.defineType("Lighter", {
     } else {
       this._game.showMessage("It is dark again.");
     }
-    if (this.onchange) this.onchange.cb(this);
+    if (this.onchange.length) {
+      for (var i = 0; i < this.onchange.length; i++)
+        this.onchange[i].cb(this);
+    }
+  },
+
+  /* Schedule an action to be invoked when the burning status changes
+   * Arguments are passed variadically. */
+  addChangeListener: function(method) {
+    this.onchange.push(this._game.createTask.apply(this._game, arguments));
   }
 });
 
