@@ -755,17 +755,59 @@ Item.prototype = {
   }
 };
 
+/* An item that can be activated and deactivated
+ * The use() method is specified to toggle the activity state (subtypes may
+ * override this); changing the activity triggers listeners.
+ */
+function ActiveItem(game, name) {
+  this.active = false;
+  this.listeners = [];
+  Item.apply(this, arguments);
+}
+
+ActiveItem.prototype = Object.create(Item);
+
+/* Use the item in some generic way */
+ActiveItem.prototype.use = function() {
+  this.setActive(! this.active);
+};
+
+/* Set the activity flag
+ * Returns whether the change has been successful. */
+ActiveItem.prototype.setActive = function(state) {
+  if (state == this.active) return false;
+  this.active = state;
+  for (var i = 0; i < this.listeners.length; i++) {
+    if (this.listeners[i].cb(this))
+      this.listeners.splice(i--, 1);
+  }
+};
+
+/* Convenience function for adding an Action as a change listener
+ * The invoked method receives -- aside from fixed arguments that are given
+ * to this method variadically -- one single argument, namely this item.
+ * If the return value of the listener method is true, the listener is
+ * removed. */
+ActiveItem.prototype.addListener = function(method) {
+  this.listeners.push(this._makeAction.apply(this, arguments));
+};
+
+/* OOP stuff */
+ActiveItem.prototype.constructor = ActiveItem;
+
 /* Define an Item subtype
  * A constructor with the given name is created; (own) properties are copied
  * from props into the prototype. The constructor and __sername__ properties
  * are set automatically. */
 Item.defineType = function(name, props) {
+  /* Allow subclasses of Item to use this */
+  var base = this;
   /* Create constructor function
    * There seems not to be any method actually supported by reasonably recent
    * browsers to do that but manual construction. */
   var func = eval(
     "(function " + name + "(game, name) {\n" +
-    "  Item.apply(this, arguments);\n" +
+    "  base.apply(this, arguments);\n" +
     "})");
   /* Create prototype */
   func.prototype = Object.create(Item.prototype);
@@ -773,7 +815,9 @@ Item.defineType = function(name, props) {
     if (props.hasOwnProperty(k))
       func.prototype[k] = props[k];
   }
-  /* Add special properties */
+  /* Add special properties
+   * All concrete item types (including those of subclasses) are intentionally
+   * stored in Item. */
   func.prototype.constructor = func;
   func.prototype.__sername__ = "Item." + name;
   /* Install into Item */
@@ -781,6 +825,9 @@ Item.defineType = function(name, props) {
   /* Return something */
   return func;
 };
+
+/* Allow deriving concrete item types from ActiveItem */
+ActiveItem.defineType = Item.defineType;
 
 /* A featureless piece of text */
 Item.defineType("Label", {
