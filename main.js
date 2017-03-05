@@ -437,7 +437,7 @@ GameStory.prototype = {
     this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
     var lighter = this.game.addItem("Lighter", "lighter", 100, 70);
-    lighter.addChangeListener("story.onlighterchange");
+    lighter.addListener("story.onlighterchange");
     this.game.showItem("lighter", "start");
     var btn = this.game.addItem("Button", "look-around", "Look around",
                                 "story.lookAround");
@@ -447,7 +447,7 @@ GameStory.prototype = {
   /* Called when the burning state of the lighter changes */
   onlighterchange: function(lighter) {
     if (this.game.state.misc.descIndex == null)
-      this.game.showItem("look-around", "start", lighter.burning);
+      this.game.showItem("look-around", "start", lighter.active);
   },
 
   /* Gather first impressions of the player's surroundings */
@@ -470,7 +470,7 @@ GameStory.prototype = {
         this.game.showItem("pass-door", "start");
         return true;
       }
-      if (this.game.state.items.lighter.burning) {
+      if (this.game.state.items.lighter.active) {
         var entry = this.DESCRIPTION[ms.descIndex++];
         this.game.showMessage(entry[0]);
         ms.descTime = now + entry[1];
@@ -483,7 +483,7 @@ GameStory.prototype = {
   /* Move to the next room */
   goToEngines: function() {
     this.game.removeItem("pass-door", "start");
-    if (this.game.state.items.lighter.burning)
+    if (this.game.state.items.lighter.active)
       this.game.showMessage("The air flow lets the flame flare to a " +
         "bright yellow.");
     this.game.showMessage("You open the door and float through it.");
@@ -870,7 +870,7 @@ Item.defineType("Button", {
 });
 
 /* The lighter */
-Item.defineType("Lighter", {
+ActiveItem.defineType("Lighter", {
   /* Initialize instance */
   __init__: function(capacity, fill) {
     if (! fill) fill = 0;
@@ -878,17 +878,15 @@ Item.defineType("Lighter", {
     v.maximum = capacity;
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
-    this.burning = false;
-    this.onchange = [];
   },
 
   /* Deplete the lighter's fuel */
   _deplete: function(variable, delta) {
-    if (! this.burning) return 0;
+    if (! this.active) return 0;
     var decr = delta * 0.1;
     if (decr > variable.value) {
       decr = variable.value;
-      this.setBurning(false);
+      this.setActive(false);
     }
     return -decr;
   },
@@ -932,28 +930,21 @@ Item.defineType("Lighter", {
   _updateButton: function() {
     if (this._button == null)
       this._button = $sel(".item-use", this.render());
-    var text = (this.burning) ? "Extinguish" : "Ignite";
+    var text = (this.active) ? "Extinguish" : "Ignite";
     if (this._button.textContent != text)
       this._button.textContent = text;
   },
 
-  /* Use the item */
-  use: function() {
-    this.setBurning(! this.burning);
-  },
-
   /* Set the burning state */
-  setBurning: function(state) {
+  setActive: function(state) {
     var v = this._getVar();
     if (state && v.value < 1e-6) {
       this._game.showMessage("The lighter is burnt out.");
-      return;
-    } else if (state == this.burning) {
-      return;
+      return false;
+    } else if (state == this.active) {
+      return false;
     }
-    this.burning = state;
-    this._updateButton();
-    if (this.burning) {
+    if (this.state) {
       if (this._game.setFlag("lighter-space")) {
         this._game.showMessage("The flame looks funny... Oh, right.");
         this._game.showMessage(["i", null, "Lack of gravity."]);
@@ -962,16 +953,9 @@ Item.defineType("Lighter", {
     } else {
       this._game.showMessage("It is dark again.");
     }
-    if (this.onchange.length) {
-      for (var i = 0; i < this.onchange.length; i++)
-        this.onchange[i].cb(this);
-    }
-  },
-
-  /* Schedule an action to be invoked when the burning status changes
-   * Arguments are passed variadically. */
-  addChangeListener: function(method) {
-    this.onchange.push(this._game.createTask.apply(this._game, arguments));
+    ActiveItem.setActive.call(this, state);
+    this._updateButton();
+    return true;
   }
 });
 
