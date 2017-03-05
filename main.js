@@ -439,9 +439,8 @@ GameStory.prototype = {
     var lighter = this.game.addItem("Lighter", "lighter", 100, 70);
     lighter.addListener("story.onlighterchange");
     this.game.showItem("lighter", "start");
-    var btn = this.game.addItem("Button", "look-around", "Look around",
-                                "story.lookAround");
-    btn.classes = "fade-in";
+    this.game.addItem("Button", "look-around", "Look around",
+                      "story.lookAround");
   },
 
   /* Called when the burning state of the lighter changes */
@@ -861,7 +860,7 @@ Item.defineType("Button", {
     this.text = text;
     this.funcname = funcname;
     this.delay = 0;
-    this.classes = null;
+    this.classes = "fade-in";
     this.args = Array.prototype.slice.call(arguments, 2);
   },
 
