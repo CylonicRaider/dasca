@@ -765,7 +765,7 @@ function ActiveItem(game, name) {
   Item.apply(this, arguments);
 }
 
-ActiveItem.prototype = Object.create(Item);
+ActiveItem.prototype = Object.create(Item.prototype);
 
 /* Use the item in some generic way */
 ActiveItem.prototype.use = function() {
@@ -789,7 +789,7 @@ ActiveItem.prototype.setActive = function(state) {
  * If the return value of the listener method is true, the listener is
  * removed. */
 ActiveItem.prototype.addListener = function(method) {
-  this.listeners.push(this._makeAction.apply(this, arguments));
+  this.listeners.push(this._game.createTask.apply(this._game, arguments));
 };
 
 /* OOP stuff */
@@ -810,7 +810,7 @@ Item.defineType = function(name, props) {
     "  base.apply(this, arguments);\n" +
     "})");
   /* Create prototype */
-  func.prototype = Object.create(Item.prototype);
+  func.prototype = Object.create(base.prototype);
   for (var k in props) {
     if (props.hasOwnProperty(k))
       func.prototype[k] = props[k];
@@ -944,7 +944,7 @@ ActiveItem.defineType("Lighter", {
     } else if (state == this.active) {
       return false;
     }
-    if (this.state) {
+    if (state) {
       if (this._game.setFlag("lighter-space")) {
         this._game.showMessage("The flame looks funny... Oh, right.");
         this._game.showMessage(["i", null, "Lack of gravity."]);
@@ -953,7 +953,7 @@ ActiveItem.defineType("Lighter", {
     } else {
       this._game.showMessage("It is dark again.");
     }
-    ActiveItem.setActive.call(this, state);
+    ActiveItem.prototype.setActive.call(this, state);
     this._updateButton();
     return true;
   }
