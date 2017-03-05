@@ -483,6 +483,10 @@ GameStory.prototype = {
   /* Move to the next room */
   goToEngines: function() {
     this.game.removeItem("pass-door", "start");
+    if (this.game.state.items.lighter.burning)
+      this.game.showMessage("The air flow lets the flame flare to a " +
+        "bright yellow.");
+    this.game.showMessage("You open the door and float through it.");
     this.game.addTab("engines", "Engine room");
     this.game.addItem("Label", "engines-nyi", ["i", null, "\u2014 T.B.C. \u2014"]);
     this.game.showItem("engines-nyi", "engines");
