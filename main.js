@@ -802,6 +802,21 @@ ActiveItem.prototype.addListener = function(method) {
   this.listeners.push(this._game.createTask.apply(this._game, arguments));
 };
 
+/* Remove a listener for the named method
+ * Since the identities of Action objects are not preserved, this method is
+ * named differently and performs fuzzy matching on the subject and method
+ * name. */
+ActiveItem.prototype.removeListenerFor = function(method) {
+  var probe = this._game.createTask(method);
+  for (var i = 0; i < this.listeners.length; i++) {
+    var l = this.listeners[i];
+    if (l instanceof Action && l.self == probe.self && l.func == probe.func) {
+      this.listeners.splice(i, 1);
+      break;
+    }
+  }
+};
+
 /* OOP stuff */
 ActiveItem.prototype.constructor = ActiveItem;
 
@@ -880,8 +895,18 @@ Item.defineType("Button", {
 
   /* Conditional showing/hiding */
   showWhenActive: function(tab, item) {
-    item.listeners.push(this._makeAction("_updateVisibility", tab));
-    this._updateVisibility(tab, item);
+    var methName = "state.items." + this.name + "._updateVisibility";
+    if (this.anchorItem) {
+      var anchorObj = this._game.state.items[this.anchorItem];
+      if (anchorObj)
+        anchorObj.removeListenerFor(methName);
+    }
+    this.anchorItem = item;
+    if (item != null) {
+      var itemObj = this._game.state.items[item];
+      itemObj.addListener(methName, tab);
+      this._updateVisibility(tab, itemObj);
+    }
   },
 
   /* Conditional visibility backend */
