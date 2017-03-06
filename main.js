@@ -876,6 +876,17 @@ Item.defineType("Button", {
   use: function() {
     this._game.addTask.apply(this._game,
       [this.delay, this.funcname].concat(this.args));
+  },
+
+  /* Conditional showing/hiding */
+  showWhenActive: function(tab, item) {
+    item.listeners.push(this._makeAction("_updateVisibility", tab));
+    this._updateVisibility(tab, item);
+  },
+
+  /* Conditional visibility backend */
+  _updateVisibility: function(tab, item) {
+    this._game.showItem(this.name, tab, (!! item.active));
   }
 });
 
