@@ -438,23 +438,17 @@ GameStory.prototype = {
   showLighter: function() {
     this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
-    var lighter = this.game.addItem("Lighter", "lighter", 100, 70);
-    lighter.addListener("story.onlighterchange");
+    this.game.addItem("Lighter", "lighter", 100, 70);
     this.game.showItem("lighter", "start");
-    this.game.addItem("Button", "look-around", "Look around",
-                      "story.lookAround");
-  },
-
-  /* Called when the burning state of the lighter changes */
-  onlighterchange: function(lighter) {
-    if (this.game.state.misc.descIndex == null)
-      this.game.showItem("look-around", "start", lighter.active);
+    var btn = this.game.addItem("Button", "look-around", "Look around",
+                                "story.lookAround");
+    btn.showWhenActive("start", "lighter");
   },
 
   /* Gather first impressions of the player's surroundings */
   lookAround: function() {
     this.game.showTab("start", false);
-    this.game.hideItem("look-around", "start");
+    this.game.removeItem("look-around");
     this.game.state.misc.descIndex = 0;
     this.game.state.misc.descTime = null;
     this.game.addContTask("story._checkDesc");
