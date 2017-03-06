@@ -352,6 +352,8 @@ Game.prototype = {
 
   /* Remove the named item from storage and display */
   removeItem: function(name) {
+    if (this.state.items[name])
+      this.state.items[name].__remove__();
     delete this.state.items[name];
     for (var t in this.state.tabs) {
       if (! this.state.tabs.hasOwnProperty(t)) continue;
@@ -725,10 +727,13 @@ GameUI.prototype = {
 };
 
 /* An Item encapsulates a single object the player can interact with
- * Items must be serializable; hence, non-serializable properties must
- * be prefixed with underscores.
- * Arguments after game are passed to the __init__ method (if any)
- * variadically. */
+ * Item-s must be serializable; hence, non-serializable properties must be
+ * prefixed with underscores.
+ * Arguments after game and name are passed to the __init__ method (if any)
+ * variadically.
+ * The special method __remove__ is invoked with no arguments and the return
+ * value ignored when the item is being removed from the game; it should not
+ * be used thereafter. */
 function Item(game, name) {
   this._game = game;
   this.name = name;
@@ -877,6 +882,11 @@ Item.defineType("Button", {
     this.delay = 0;
     this.classes = "fade-in";
     this.args = Array.prototype.slice.call(arguments, 2);
+  },
+
+  /* Remove the item from the game */
+  __remove__: function() {
+    if (this.anchorItem) this.showWhenActive(null, null);
   },
 
   /* Render the item into a UI node */
