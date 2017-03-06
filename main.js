@@ -349,7 +349,7 @@ Game.prototype = {
     var idx = items.indexOf(name);
     if (idx != -1) items.splice(idx, 1);
     if (show) items.push(name);
-    this.ui._updateItems(tab);
+    this.ui._showItem(tab, name);
   },
 
   /* Hide the given item from sight */
@@ -682,6 +682,13 @@ GameUI.prototype = {
     return this._items[name];
   },
 
+  /* Show an item in a tab */
+  _showItem: function(tabname, name) {
+    if (tabname == this.game.state.currentTab)
+      $replaceClass(this._getItem(name), "fade-in-suppressed", "fade-in");
+    this._updateItems(tabname);
+  },
+
   /* Ensure all items are correctly present in a tab */
   _updateItems: function(tabname) {
     var tabNode = $idx("tab-" + tabname, this.root);
@@ -693,10 +700,10 @@ GameUI.prototype = {
       var node = this._getItem(order[i]);
       if (node.parentNode != tabNode) {
         tabNode.insertBefore(node, lastNode);
-      } else if (node.nextElementSibling != lastNode) {
+      }
+      while (node.nextElementSibling != lastNode) {
         tabNode.removeChild(node.nextElementSibling);
       }
-      $replaceClass(node, "fade-in-suppressed", "fade-in");
       lastNode = node;
     }
     if (lastNode) {
