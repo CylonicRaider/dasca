@@ -325,6 +325,7 @@ Game.prototype = {
   /* Select a UI tab */
   showTab: function(name, hidden, noShow) {
     if (hidden != null) this.state.tabs[name].hidden = hidden;
+    this.state.currentTab = name;
     this.ui._updateItems(name);
     this.ui._showTab(name, this.state.tabs[name].hidden, noShow);
   },
