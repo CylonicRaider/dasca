@@ -335,7 +335,7 @@ Game.prototype = {
   /* Show an item in a given UI tab, or hide it from there
    * Items can be in multiple tabs; their nodes are transparently reparented
    * on tab switches. */
-  showItem: function(name, tab, show) {
+  showItem: function(tab, name, show) {
     if (show == null) show = true;
     var items = this.state.tabs[tab].items;
     var idx = items.indexOf(name);
@@ -345,9 +345,9 @@ Game.prototype = {
   },
 
   /* Hide the given item from sight */
-  hideItem: function(name, tab) {
+  hideItem: function(tab, name) {
     /* Actually already implemented */
-    this.showItem(name, tab, false);
+    this.showItem(tba, name, false);
   },
 
   /* Remove the named item from storage and display */
@@ -430,7 +430,7 @@ GameStory.prototype = {
   showStart: function() {
     this.game.addItem("Button", "show-lighter", "Check pockets",
                       "story.showLighter");
-    this.game.showItem("show-lighter", "start");
+    this.game.showItem("start", "show-lighter");
     this.game.showTab("start");
   },
 
@@ -439,7 +439,7 @@ GameStory.prototype = {
     this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
     this.game.addItem("Lighter", "lighter", 100, 70);
-    this.game.showItem("lighter", "start");
+    this.game.showItem("start", "lighter");
     var btn = this.game.addItem("Button", "look-around", "Look around",
                                 "story.lookAround");
     btn.showWhenActive("start", "lighter");
@@ -462,7 +462,7 @@ GameStory.prototype = {
         this.game.removeItem("look-around", "start");
         this.game.addItem("Button", "pass-door", "Float through door",
                           "story.goToEngines");
-        this.game.showItem("pass-door", "start");
+        this.game.showItem("start", "pass-door");
         return true;
       }
       if (this.game.state.items.lighter.active) {
@@ -483,9 +483,9 @@ GameStory.prototype = {
         "bright yellow.");
     this.game.showMessage("You open the door and float through it.");
     this.game.addTab("engines", "Engine room");
-    this.game.showItem("lighter", "engines");
+    this.game.showItem("engines", "lighter");
     this.game.addItem("Label", "engines-nyi", ["i", null, "\u2014 T.B.C. \u2014"]);
-    this.game.showItem("engines-nyi", "engines");
+    this.game.showItem("engines", "engines-nyi");
     this.game.showTab("engines");
   },
 
@@ -915,7 +915,7 @@ Item.defineType("Button", {
 
   /* Conditional visibility backend */
   _updateVisibility: function(tab, item) {
-    this._game.showItem(this.name, tab, (!! item.active));
+    this._game.showItem(tab, this.name, (!! item.active));
   }
 });
 
