@@ -76,6 +76,14 @@ function $makeNode(tag, className, attrs, children) {
   return ret;
 }
 
+/* Replace a CSS class with another */
+function $replaceClass(elem, from, to) {
+  if (elem.classList.contains(from)) {
+    elem.classList.remove(from);
+    elem.classList.add(to);
+  }
+}
+
 /* Show the given UI element, hiding any siblings and showing all its
  * showable parents */
 function showNode(node) {
@@ -643,10 +651,7 @@ GameUI.prototype = {
     }
     for (var node = $idx("tab-" + name, this.root).firstElementChild;
          node; node = node.nextElementSibling) {
-      if (node.classList.contains("fade-in")) {
-        node.classList.remove("fade-in");
-        node.classList.add("fade-in-suppressed");
-      }
+      $replaceClass(node, "fade-in", "fade-in-suppressed");
     }
     if (! noShow)
       showNode(this._tabs[name]);
@@ -691,10 +696,7 @@ GameUI.prototype = {
       } else if (node.nextElementSibling != lastNode) {
         tabNode.removeChild(node.nextElementSibling);
       }
-      if (node.classList.contains("fade-in-suppressed")) {
-        node.classList.remove("fade-in-suppressed");
-        node.classList.add("fade-in");
-      }
+      $replaceClass(node, "fade-in-suppressed", "fade-in");
       lastNode = node;
     }
     if (lastNode) {
