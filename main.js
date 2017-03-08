@@ -222,7 +222,12 @@ function Game(state, storage) {
   this.story = new GameStory(this);
   this.running = true;
   this.paused = false;
-  if (! state) this.story.init();
+  this.ui.render();
+  if (state) {
+    this.pause(false);
+  } else {
+    this.story.init();
+  }
   this.state.scheduler.run();
 }
 
@@ -331,11 +336,11 @@ Game.prototype = {
   },
 
   /* Select a UI tab */
-  showTab: function(name, hidden, noShow) {
+  showTab: function(name, hidden) {
     if (hidden != null) this.state.tabs[name].hidden = hidden;
     this.state.currentTab = name;
     this.ui._updateItems(name);
-    this.ui._showTab(name, this.state.tabs[name].hidden, noShow);
+    this.ui._showTab(name, this.state.tabs[name].hidden);
   },
 
   /* Add an item */
@@ -604,6 +609,11 @@ GameUI.prototype = {
         if (! state.tabs.hasOwnProperty(key)) continue;
         this._addTab(key, state.tabs[key].name, state.tabs[key]);
       }
+      var curTab = this.game.state.currentTab;
+      if (curTab) {
+        this._updateItems(curTab);
+        this._showTab(curTab, this.game.state.tabs[curTab].hidden);
+      }
       this._updatePause();
     }
     return this.root;
@@ -653,7 +663,7 @@ GameUI.prototype = {
   },
 
   /* Show a UI tab */
-  _showTab: function(name, hidden, noShow) {
+  _showTab: function(name, hidden) {
     var tabbtn = this._tabButtons[name];
     var tabbar = $idx("tabbar", this.root);
     if (! hidden && ! tabbar.contains(tabbtn)) {
@@ -664,8 +674,7 @@ GameUI.prototype = {
          node; node = node.nextElementSibling) {
       $replaceClass(node, "fade-in", "fade-in-suppressed");
     }
-    if (! noShow)
-      showNode(this._tabs[name]);
+    showNode(this._tabs[name]);
   },
 
   /* Ensure the UI tab buttons are in the correct order */
