@@ -198,27 +198,40 @@ Variable.prototype = {
   constructor: Variable
 };
 
-/* The main game object */
-function Game(state) {
+/* The main game object
+ * state is a game state to restore (see below for details); storage is a
+ * StorageCell instance used for state persistence (or absent for none).
+ * If state is falsy, a new one is created; otherwise, state is deserialized.
+ * If storage is truthy and state is null, the constructor attempts to load
+ * a state from the storage (this, passing an empty string as the state
+ * forces creating a new one). */
+function Game(state, storage) {
   this._env = Object.create(window);
   this._env.game = this;
-  if (state == null) {
+  if (storage && state == null) {
+    state = storage.loadRaw();
+  }
+  if (! state) {
     this.state = new GameState(this);
     this.state.scheduler.addContTask(this.createTask("_updateVars"));
   } else {
     this.state = deserialize(state, this._env);
   }
+  this.storage = storage;
   this.ui = new GameUI(this);
   this.story = new GameStory(this);
   this.running = true;
   this.paused = false;
+  if (! state) this.story.init();
   this.state.scheduler.run();
 }
 
 Game.prototype = {
   /* Save the game state into a string */
   save: function() {
-    return serialize(this.state);
+    var st = serialize(this.state);
+    if (this.storage) this.storage.saveRaw(st);
+    return st;
   },
 
   /* Mount the game into the given node */
@@ -229,11 +242,6 @@ Game.prototype = {
   /* Unmount the game from its current parent node, if any */
   unmount: function() {
     return this.ui.unmount();
-  },
-
-  /* Start the game */
-  start: function() {
-    this.story.init();
   },
 
   /* Get the value of a flag */
@@ -383,6 +391,7 @@ Game.prototype = {
 
   /* Stop running the game */
   exit: function() {
+    this.save();
     this.state.scheduler.running = false;
     this.running = false;
   },
@@ -570,7 +579,8 @@ GameUI.prototype = {
           ["div", "col col-all"],
           ["button", "btn btn-small", {id: "pause-game"}, "Pause"],
           ["hr"],
-          ["button", "btn btn-small", {id: "exit-game"}, "Exit"]
+          ["button", "btn btn-small", {id: "exit-game",
+            title: "Save game and exit"}, "Exit"]
         ]]
       ]);
       $idx("pause-game", this.root).addEventListener("click", function() {
@@ -1022,18 +1032,25 @@ ActiveItem.defineType("Lighter", {
 /* *** Initialization *** */
 
 var Dasca = {
-  game: null
+  game: null,
+  storage: null
 };
 
 function init() {
-  var game = null;
-  $id("startgame").addEventListener("click", function() {
+  function startgame(restore) {
     if (game) game.unmount();
-    game = new Game();
+    game = new Game((restore ? null : ""), storage);
     Dasca.game = game;
     game.mount($id("mainscreen"));
-    game.start();
     showNode("mainscreen");
+  }
+  var game = null, storage = new StorageCell("dasca-save-v1");
+  Dasca.storage = storage;
+  $id("startgame").addEventListener("click", function() {
+    startgame(false);
+  });
+  $id("loadgame").addEventListener("click", function() {
+    startgame(true);
   });
   $id("credits-title").addEventListener("click", function() {
     if (game) game.pause(true);
