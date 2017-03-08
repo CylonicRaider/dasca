@@ -344,6 +344,48 @@ function deserialize(obj, env) {
   });
 }
 
+/* Construct a new StorageCell
+ * The object encapsulates the value associated with a particular
+ * localStorage key, and additionally caches saved values in memory (in case
+ * localStorage is not available). */
+function StorageCell(name) {
+  this.name = name;
+  this.rawValue = undefined;
+}
+
+StorageCell.prototype = {
+  /* Load the value without deserializing */
+  loadRaw: function() {
+    if (window.localStorage) {
+      var val = localStorage.getItem(this.name);
+      if (val != null)
+        this.rawValue = val;
+    }
+    return this.rawValue;
+  },
+
+  /* Load the value and deserialize it (in the given environment) */
+  load: function(env) {
+    return deserialize(this.loadRaw(), env);
+  },
+
+  /* Save the given value without serialization */
+  saveRaw: function(val) {
+    this.rawValue = val;
+    if (window.localStorage) {
+      localStorage.setItem(this.name, this.rawValue);
+    }
+  },
+
+  /* Serialize the given value and save it */
+  save: function(val) {
+    this.saveRaw(serialize(val));
+  },
+
+  /* OOP... */
+  constructor: StorageCell
+};
+
 /* *** Action ***
  * A serializable wrapper around a method call. Can be used as a callback for
  * Scheduler; for that reason, a property named "time" is serialized and
