@@ -1064,11 +1064,22 @@ function init() {
   $id("export").addEventListener("click", function() {
     showNode("exportscreen");
   });
+  $id("exportsave").addEventListener("click", function() {
+    $id("text-export").value = storage.loadRaw() || "";
+  });
   $id("importsave").addEventListener("click", function() {
     storage.saveRaw($id("text-export").value);
   });
-  $id("exportsave").addEventListener("click", function() {
-    $id("text-export").value = storage.loadRaw() || "";
+  $id("downloadsave").addEventListener("click", function() {
+    var data = storage.loadRaw();
+    if (! data) {
+      alert('Nothing saved');
+      return;
+    }
+    var link = $id("file-download");
+    link.href = 'data:application/json,' + data;
+    console.log(link);
+    link.click();
   });
   $id("uploadsave").addEventListener("click", function() {
     $id("file-upload").click();
@@ -1084,17 +1095,6 @@ function init() {
       alert('OK');
     };
     reader.readAsText(file);
-  });
-  $id("downloadsave").addEventListener("click", function() {
-    var data = storage.loadRaw();
-    if (! data) {
-      alert('Nothing saved');
-      return;
-    }
-    var link = $id("file-download");
-    link.href = 'data:application/json,' + data;
-    console.log(link);
-    link.click();
   });
   $id("back-export").addEventListener("click", function() {
     showNode("titlescreen");
