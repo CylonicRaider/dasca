@@ -1077,11 +1077,11 @@ function init() {
   $listen("downloadsave", "click", function() {
     var data = storage.loadRaw();
     if (! data) {
-      alert('Nothing saved');
+      alert("Nothing saved");
       return;
     }
     var link = $id("file-download");
-    link.href = 'data:application/json,' + data;
+    link.href = "data:application/json," + data;
     console.log(link);
     link.click();
   });
@@ -1096,7 +1096,7 @@ function init() {
     reader.onload = function(evt) {
       console.log(reader.result);
       storage.saveRaw(reader.result);
-      alert('OK');
+      alert("OK");
     };
     reader.readAsText(file);
   });
