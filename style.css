@@ -63,17 +63,20 @@ h1 {
   height: 0.2em;
 }
 
-.btn {
+.btn, .area {
   border: 1px solid #808080;
   margin: 0.25em;
-  padding: 3px;
+  box-sizing: border-box;
   color: inherit;
   font: inherit;
-  cursor: pointer;
   background: none;
   outline: none;
-  text-decoration: none;
   outline-offset: -3px;
+}
+.btn {
+  padding: 3px;
+  cursor: pointer;
+  text-decoration: none;
 }
 .btn::-moz-focus-inner {
   margin: 0;
@@ -107,6 +110,15 @@ h1 {
 }
 .btn-link:visited {
   color: #c000c0;
+}
+.area {
+  width: 100%;
+  min-height: 4.5em;
+  resize: vertical;
+}
+.area-small {
+  font-size: 0.75em;
+  line-height: 1;
 }
 
 .btnrow {

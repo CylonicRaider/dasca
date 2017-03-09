@@ -24,15 +24,34 @@ body { background: black; color: white; }
         <p class="subtitle">In early development! :)</p>
         <hr/>
         <button id="startgame" class="btn btn-wide">Start game</button>
-        <button id="loadgame" class="btn btn-wide">Load game</button>
-        <form class="btnrow" action="#" method="get" id="file-actions">
-          <button id="importsave" class="btn btn-wide">Import save</button>
-          <input type="file" id="file-upload" class="no-display"/>
-          <a href="#" download="dasca-save.json" id="file-download"
-            class="no-display"></a>
-          <button id="exportsave" class="btn btn-wide">Export save</button>
-        </form>
+        <div class="btnrow">
+          <button id="loadgame" class="btn btn-wide">Load saved game</button>
+          <button id="export" class="btn btn-wide">Import/Export</button>
+        </div>
         <button id="credits-title" class="btn btn-wide">Credits</button>
+      </div>
+      <div id="exportscreen" class="selectable layer text-popup">
+        <h2>Import / Export game</h2>
+        <hr/>
+        <textarea class="area area-small" id="text-export" autocomplete="off"
+          ></textarea>
+        <input type="file" id="file-upload" class="no-display"/>
+        <a href="#" download="dasca-save.json" id="file-download"
+          class="no-display"></a>
+        <div class="btnrow">
+          <button id="importsave" class="btn btn-wide">Import save</button>
+          <button id="exportsave" class="btn btn-wide">Export save</button>
+        </div>
+        <div class="btnrow">
+          <button id="uploadsave" class="btn btn-wide">Upload save</button>
+          <button id="downloadsave" class="btn btn-wide">Download
+            save</button>
+        </div>
+        <div class="btnrow">
+          <button id="back-export" class="btn btn-wide">Back</button>
+          <button id="loadgame-export" class="btn btn-wide">Start saved
+            game</button>
+        </div>
       </div>
       <div id="mainscreen" class="selectable layer"></div>
       <div id="creditscreen" class="selectable layer text-popup">

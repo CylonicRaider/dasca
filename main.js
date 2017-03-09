@@ -1061,7 +1061,16 @@ function init() {
   $id("loadgame").addEventListener("click", function() {
     startgame(true);
   });
+  $id("export").addEventListener("click", function() {
+    showNode("exportscreen");
+  });
   $id("importsave").addEventListener("click", function() {
+    storage.saveRaw($id("text-export").value);
+  });
+  $id("exportsave").addEventListener("click", function() {
+    $id("text-export").value = storage.loadRaw() || "";
+  });
+  $id("uploadsave").addEventListener("click", function() {
     $id("file-upload").click();
   });
   $id("file-upload").addEventListener("change", function() {
@@ -1076,13 +1085,22 @@ function init() {
     };
     reader.readAsText(file);
   });
-  $id("exportsave").addEventListener("click", function() {
+  $id("downloadsave").addEventListener("click", function() {
     var data = storage.loadRaw();
-    if (! data) return;
+    if (! data) {
+      alert('Nothing saved');
+      return;
+    }
     var link = $id("file-download");
     link.href = 'data:application/json,' + data;
     console.log(link);
     link.click();
+  });
+  $id("back-export").addEventListener("click", function() {
+    showNode("titlescreen");
+  });
+  $id("loadgame-export").addEventListener("click", function() {
+    startgame(true);
   });
   $id("credits-title").addEventListener("click", function() {
     if (game) game.pause(true);
