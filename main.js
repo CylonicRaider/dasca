@@ -18,6 +18,10 @@ function $sel(sel, elem) {
 function $selAll(sel, elem) {
   return (elem || document).querySelectorAll(sel);
 }
+function $listen(elem, event, callback) {
+  if (typeof elem == "string") elem = $id(elem);
+  elem.addEventListener(event, callback);
+}
 
 /* Create a DOM element */
 function $makeNode(tag, className, attrs, children) {
@@ -588,14 +592,14 @@ GameUI.prototype = {
             title: "Save game and exit"}, "Exit"]
         ]]
       ]);
-      $idx("pause-game", this.root).addEventListener("click", function() {
+      $listen($idx("pause-game", this.root), "click", function() {
         this.game.pause();
       }.bind(this));
-      $idx("exit-game", this.root).addEventListener("click", function() {
+      $listen($idx("exit-game", this.root), "click", function() {
         this.game.exit();
         showNode("titlescreen");
       }.bind(this));
-      $idx("credits-game", this.root).addEventListener("click", function() {
+      $listen($idx("credits-game", this.root), "click", function() {
         this.game.pause(true);
         showNode("creditscreen");
       }.bind(this));
@@ -977,7 +981,7 @@ ActiveItem.defineType("Lighter", {
       ["button", "btn btn-small item-use", "..."],
       ["div", "item-bar", [["div", "item-bar-content"]]]
     ]);
-    $sel(".item-use", ret).addEventListener("click", this.use.bind(this));
+    $listen($sel(".item-use", ret), "click", this.use.bind(this));
     this._meter = $sel(".item-bar-content", ret);
     this._button = $sel(".item-use", ret);
     this._updateMeter();
@@ -1055,22 +1059,22 @@ function init() {
   }
   var game = null, storage = new StorageCell("dasca-save-v1");
   Dasca.storage = storage;
-  $id("startgame").addEventListener("click", function() {
+  $listen("startgame", "click", function() {
     startgame(false);
   });
-  $id("loadgame").addEventListener("click", function() {
+  $listen("loadgame", "click", function() {
     startgame(true);
   });
-  $id("export").addEventListener("click", function() {
+  $listen("export", "click", function() {
     showNode("exportscreen");
   });
-  $id("exportsave").addEventListener("click", function() {
+  $listen("exportsave", "click", function() {
     $id("text-export").value = storage.loadRaw() || "";
   });
-  $id("importsave").addEventListener("click", function() {
+  $listen("importsave", "click", function() {
     storage.saveRaw($id("text-export").value);
   });
-  $id("downloadsave").addEventListener("click", function() {
+  $listen("downloadsave", "click", function() {
     var data = storage.loadRaw();
     if (! data) {
       alert('Nothing saved');
@@ -1081,10 +1085,10 @@ function init() {
     console.log(link);
     link.click();
   });
-  $id("uploadsave").addEventListener("click", function() {
+  $listen("uploadsave", "click", function() {
     $id("file-upload").click();
   });
-  $id("file-upload").addEventListener("change", function() {
+  $listen("file-upload", "change", function() {
     var sel = $id("file-upload");
     var file = sel.files[0];
     if (! file) return;
@@ -1096,17 +1100,17 @@ function init() {
     };
     reader.readAsText(file);
   });
-  $id("back-export").addEventListener("click", function() {
+  $listen("back-export", "click", function() {
     showNode("titlescreen");
   });
-  $id("loadgame-export").addEventListener("click", function() {
+  $listen("loadgame-export", "click", function() {
     startgame(true);
   });
-  $id("credits-title").addEventListener("click", function() {
+  $listen("credits-title", "click", function() {
     if (game) game.pause(true);
     showNode("creditscreen");
   });
-  $id("back-credits").addEventListener("click", function() {
+  $listen("back-credits", "click", function() {
     if (game && game.running) {
       game.pause(false);
       showNode("mainscreen");
@@ -1117,4 +1121,4 @@ function init() {
   showNode("titlescreen");
 }
 
-window.addEventListener("load", init);
+$listen(window, "load", init);
