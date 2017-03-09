@@ -1059,15 +1059,6 @@ function init() {
   }
   var game = null, storage = new StorageCell("dasca-save-v1");
   Dasca.storage = storage;
-  $listen("startgame", "click", function() {
-    startgame(false);
-  });
-  $listen("loadgame", "click", function() {
-    startgame(true);
-  });
-  $listen("export", "click", function() {
-    showNode("exportscreen");
-  });
   $listen("exportsave", "click", function() {
     $id("text-export").value = storage.loadRaw() || "";
   });
@@ -1100,12 +1091,6 @@ function init() {
     };
     reader.readAsText(file);
   });
-  $listen("back-export", "click", function() {
-    showNode("titlescreen");
-  });
-  $listen("loadgame-export", "click", function() {
-    startgame(true);
-  });
   $listen("credits-title", "click", function() {
     if (game) game.pause(true);
     showNode("creditscreen");
@@ -1117,6 +1102,17 @@ function init() {
     } else {
       showNode("titlescreen");
     }
+  });
+  // jQuery? Naaah...
+  Array.prototype.forEach.call($selAll("[data-switch]"), function(elem) {
+    $listen(elem, "click", function() {
+      showNode(elem.dataset.switch);
+    });
+  });
+  Array.prototype.forEach.call($selAll("[data-newgame]"), function(elem) {
+    $listen(elem, "click", function() {
+      startgame(elem.dataset.newgame == "load");
+    });
   });
   showNode("titlescreen");
 }

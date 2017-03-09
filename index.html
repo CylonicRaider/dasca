@@ -23,12 +23,16 @@ body { background: black; color: white; }
         <hr/>
         <p class="subtitle">In early development! :)</p>
         <hr/>
-        <button id="startgame" class="btn btn-wide">Start game</button>
+        <button id="startgame" class="btn btn-wide"
+          data-newgame="new">Start game</button>
         <div class="btnrow">
-          <button id="loadgame" class="btn btn-wide">Load saved game</button>
-          <button id="export" class="btn btn-wide">Import / Export</button>
+          <button id="loadgame" class="btn btn-wide"
+            data-newgame="load">Load saved game</button>
+          <button id="export" class="btn btn-wide"
+            data-switch="exportscreen">Import / Export</button>
         </div>
-        <button id="credits-title" class="btn btn-wide">Credits</button>
+        <button id="credits-title" class="btn btn-wide"
+          data-switch="creditscreen">Credits</button>
       </div>
       <div id="exportscreen" class="selectable layer text-popup">
         <h2>Import / Export game</h2>
@@ -48,9 +52,10 @@ body { background: black; color: white; }
           <button id="uploadsave" class="btn btn-wide">Upload save</button>
         </div>
         <div class="btnrow">
-          <button id="back-export" class="btn btn-wide">Back</button>
-          <button id="loadgame-export" class="btn btn-wide">Start saved
-            game</button>
+          <button id="back-export" class="btn btn-wide"
+            data-switch="titlescreen">Back</button>
+          <button id="loadgame-export" class="btn btn-wide"
+            data-newgame="load">Start saved game</button>
         </div>
       </div>
       <div id="mainscreen" class="selectable layer"></div>
