@@ -1061,6 +1061,29 @@ function init() {
   $id("loadgame").addEventListener("click", function() {
     startgame(true);
   });
+  $id("importsave").addEventListener("click", function() {
+    $id("file-upload").click();
+  });
+  $id("file-upload").addEventListener("change", function() {
+    var sel = $id("file-upload");
+    var file = sel.files[0];
+    if (! file) return;
+    var reader = new FileReader();
+    reader.onload = function(evt) {
+      console.log(reader.result);
+      storage.saveRaw(reader.result);
+      alert('OK');
+    };
+    reader.readAsText(file);
+  });
+  $id("exportsave").addEventListener("click", function() {
+    var data = storage.loadRaw();
+    if (! data) return;
+    var link = $id("file-download");
+    link.href = 'data:application/json,' + data;
+    console.log(link);
+    link.click();
+  });
   $id("credits-title").addEventListener("click", function() {
     if (game) game.pause(true);
     showNode("creditscreen");

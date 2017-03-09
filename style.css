@@ -109,6 +109,17 @@ h1 {
   color: #c000c0;
 }
 
+.btnrow {
+  display: flex;
+  width: 100%;
+}
+.btnrow > .btn:first-child {
+  margin-left: 0;
+}
+.btnrow > .btn:last-child {
+  margin-right: 0;
+}
+
 #mainscreen, #game-content {
   display: flex;
   flex-direction: column;
@@ -207,4 +218,8 @@ h1 {
 
 .dim {
   opacity: 0.5;
+}
+
+.no-display {
+  display: none;
 }
