@@ -443,7 +443,7 @@ function GameStory(game) {
 
 GameStory.prototype = {
   /* Description of surroundings */
-  DESCRIPTION: [
+  DESCRIPTION_START: [
     ["You are on the bridge of a spacecraft.", 5],
     ["The windows would provide a wide panorama onto (presumably) space " +
       "if they were not blocked by dark shutters.", 8],
@@ -481,15 +481,14 @@ GameStory.prototype = {
     this.game.showMessage("You find a lighter.");
     this.game.addItem("Lighter", "lighter", 100, 70);
     this.game.showItem("start", "lighter");
-    var btn = this.game.addItem("Button", "look-around", "Look around",
-                                "story.lookAround");
-    btn.showWhenActive("start", "lighter");
+    this.game.addItem("Button", "look-around-start", "Look around",
+      "story.lookAroundStart").showWhenActive("start", "lighter");
   },
 
   /* Gather first impressions of the player's surroundings */
-  lookAround: function() {
+  lookAroundStart: function() {
     this.game.showTab("start", false);
-    this.game.removeItem("look-around");
+    this.game.removeItem("look-around-start");
     this.game.state.misc.descIndex = 0;
     this.game.state.misc.descTime = null;
     this.game.addContTask("story._checkDesc");
@@ -499,8 +498,8 @@ GameStory.prototype = {
   _checkDesc: function(now) {
     var ms = this.game.state.misc;
     if (ms.descTime == null || ms.descTime <= now) {
-      if (ms.descIndex >= this.DESCRIPTION.length) {
-        this.game.removeItem("look-around", "start");
+      if (ms.descIndex >= this.DESCRIPTION_START.length) {
+        this.game.removeItem("look-around-start");
         this.game.addItem("Button", "pass-door", "Float through door",
                           "story.goToEngines");
         this.game.showItem("start", "pass-door");
@@ -518,16 +517,43 @@ GameStory.prototype = {
 
   /* Move to the next room */
   goToEngines: function() {
-    this.game.removeItem("pass-door", "start");
+    this.game.removeItem("pass-door");
     if (this.game.state.items.lighter.active)
       this.game.showMessage("The air flow lets the flame flare to a " +
         "bright yellow.");
     this.game.showMessage("You open the door and float through it.");
     this.game.addTab("engines", "Engine room");
     this.game.showItem("engines", "lighter");
-    this.game.addItem("Label", "engines-nyi", ["i", null, "\u2014 T.B.C. \u2014"]);
-    this.game.showItem("engines", "engines-nyi");
+    this.game.addItem("Button", "look-around-engines", "Look around",
+      "story.lookAroundEngines").showWhenActive("engines", "lighter");
     this.game.showTab("engines");
+  },
+
+  /* Look around there */
+  lookAroundEngines: function() {
+    this.game.removeItem("look-around-engines");
+    this.game.showMessage("The room's walls are covered by " +
+      "semitranslucent panels. The labels are hardly decipherable under " +
+      "the weak light.");
+    this.game.showMessage("Three doors lead out of the room; apart from " +
+      "the one to the bridge, there is one opposite to it, and one leads " +
+      "through the \u201cfloor\u201d.");
+    this.game.showMessage("On the wall to the bridge, a big button of an " +
+      "unrecognizable color stands out.");
+    this.game.showMessage("There is a small handcrank nearby. It looks " +
+      "stiff, but still operational.");
+    this.game.addItem("Crank", "crank", 3, 0.3);
+    this.game.showItem("engines", "crank");
+    this.game.addItem("Button", "start-engines", "Start engines",
+                      "story.tryStartEngines");
+    this.game.showItem("engines", "start-engines");
+    this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
+  },
+
+  /* Attempt starting the engines
+   * Will fail if there is not enough energy. */
+  tryStartEngines: function() {
+    this.game.showMessage("Nothing happens.");
   },
 
   /* OOP */
