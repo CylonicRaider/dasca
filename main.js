@@ -1056,6 +1056,33 @@ ActiveItem.defineType("Lighter", {
   }
 });
 
+/* The crank
+ * The ship is designed with much forethought, and in particular includes a
+ * means of manual power input for bootstrapping the reactor should all other
+ * ones fail. */
+ActiveItem.defineType("Crank", {
+  /* Initialize instance */
+  __init__: function(speedcap, speedincr) {
+    this.speedcap = speedcap;
+    this.speedincr = speedincr;
+  },
+
+  /* Render the item into a UI node */
+  _render: function() {
+    var ret = $makeNode("div", "item-card fade-in", [
+      ["span", "item-icon item-icon-interactive img-crank"],
+      ["div", "item-rows", [
+        ["b", "item-name", "Crank"],
+        ["hr"],
+        ["i", null, "NYI"],
+        ["button", "btn btn-small item-use", "Turn"],
+        ["div", "item-bar item-bar-pm", [["div", "item-bar-content"]]]
+      ]]
+    ]);
+    return ret;
+  }
+});
+
 /* *** Initialization *** */
 
 var Dasca = {
