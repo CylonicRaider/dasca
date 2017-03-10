@@ -116,8 +116,11 @@ h1 {
   min-height: 4.5em;
   resize: vertical;
 }
+.area-nowrap {
+  white-space: pre;
+}
 .area-small {
-  font-size: 0.75em;
+  font-size: 0.5em;
   line-height: 1;
 }
 

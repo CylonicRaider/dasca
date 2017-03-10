@@ -1074,10 +1074,16 @@ function init() {
   var game = null, storage = new StorageCell("dasca-save-v1");
   Dasca.storage = storage;
   $listen("exportsave", "click", function() {
-    $id("text-export").value = storage.loadRaw() || "";
+    var data = storage.loadRaw();
+    if (data) {
+      data = b64encw(data);
+    } else {
+      data = "";
+    }
+    $id("text-export").value = data;
   });
   $listen("importsave", "click", function() {
-    storage.saveRaw($id("text-export").value);
+    storage.saveRaw(b64decw($id("text-export").value));
   });
   $listen("downloadsave", "click", function() {
     var data = storage.loadRaw();
@@ -1086,7 +1092,7 @@ function init() {
       return;
     }
     var link = $id("file-download");
-    link.href = "data:application/json," + data;
+    link.href = "data:text/base64," + b64encw(data);
     console.log(link);
     link.click();
   });
@@ -1100,7 +1106,7 @@ function init() {
     var reader = new FileReader();
     reader.onload = function(evt) {
       console.log(reader.result);
-      storage.saveRaw(reader.result);
+      storage.saveRaw(b64decw(reader.result));
       alert("OK");
     };
     reader.readAsText(file);
