@@ -1096,11 +1096,11 @@ ActiveItem.defineType("Crank", {
   /* Render the item into a UI node */
   _render: function() {
     var ret = $makeNode("div", "item-card fade-in", [
-      ["span", "item-icon item-icon-interactive img-crank"],
+      ["span", "item-icon item-icon-interactive img-crank", {tabIndex: 0}],
       ["div", "item-rows", [
         ["b", "item-name", "Crank"],
-        ["hr"],
         ["i", null, "NYI"],
+        ["hr"],
         ["button", "btn btn-small item-use", "Turn"],
         ["div", "item-bar item-bar-pm", [["div", "item-bar-content"]]]
       ]]

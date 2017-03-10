@@ -209,11 +209,28 @@ h1 {
 }
 
 .item-card {
-  display: flex;
-  flex-wrap: wrap;
   margin-bottom: 0.25em;
 }
-.item-card .item-name {
+.item-card, .item-rows {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: space-between;
+}
+.item-card .item-icon {
+  width: 2.4em;
+  height: 2.4em;
+  cursor: pointer;
+  outline-offset: -1px;
+}
+.item-card .item-name, .item-card .item-rows {
+  flex-grow: 1;
+}
+.item-card hr {
+  width: 0.5em;
+  border: none;
+}
+.item-card .item-filler {
+  width: 100%;
   flex-grow: 1;
 }
 .item-card .item-bar {
@@ -225,6 +242,9 @@ h1 {
   width: 0%;
   height: 100%;
   background: #008000;
+}
+.item-card .btn {
+  height: 1.2em;
 }
 
 .fade-in {
