@@ -88,6 +88,20 @@ function $replaceClass(elem, from, to) {
   }
 }
 
+/* base64-encode a string with line wrapping */
+function b64encw(s) {
+  // "Binary" to "ASCII"?
+  return btoa(s).replace(/.{1,78}/g, "$&\n").trim();
+}
+
+/* Undo b64encw */
+function b64decw(s) {
+  // atob is tolerant enough. :}
+  return atob(s);
+}
+
+/* *** UI control functions *** */
+
 /* Show the given UI element, hiding any siblings and showing all its
  * showable parents */
 function showNode(node) {
