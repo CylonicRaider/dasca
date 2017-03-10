@@ -221,7 +221,7 @@ Variable.prototype = {
  * StorageCell instance used for state persistence (or absent for none).
  * If state is falsy, a new one is created; otherwise, state is deserialized.
  * If storage is truthy and state is null, the constructor attempts to load
- * a state from the storage (this, passing an empty string as the state
+ * a state from the storage (thus, passing an empty string as the state
  * forces creating a new one). */
 function Game(state, storage) {
   this._env = Object.create(window);
