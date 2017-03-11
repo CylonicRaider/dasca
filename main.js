@@ -129,7 +129,7 @@ function showNode(node) {
 
 /* Hide all selectable children of node
  * Approximate opposite of showNode. */
-function hideNodes(node) {
+function hideChildren(node) {
   if (! node) return;
   /* Resolve ID-s */
   if (typeof node == "string") node = $id("node");
@@ -614,13 +614,18 @@ GameUI.prototype = {
   render: function() {
     if (this.root == null) {
       this.root = $makeNode("div", {id: "game-content"}, [
-        ["div", "row row-all", [
-          ["div", "col col-3of10 inset", [
-            ["div", {id: "messagebar", lang: "en-US"}]
+        ["div", "pane row-all", {id: "game-layers"}, [
+          ["div", "layer selected row", [
+            ["div", "col col-3of10 inset", [
+              ["div", {id: "messagebar", lang: "en-US"}]
+            ]],
+            ["div", "col col-all", [
+              ["div", "row row-small row-btn inset", {id: "tabbar"}],
+              ["div", "row row-all pane", {id: "mainpane"}]
+            ]]
           ]],
-          ["div", "col col-all", [
-            ["div", "row row-small row-btn inset", {id: "tabbar"}],
-            ["div", "row row-all pane", {id: "mainpane"}]
+          ["div", "selectable layer text-popup shade", {id: "pausescreen"}, [
+            ["h3", null, "Paused"]
           ]]
         ]],
         ["div", "row row-small inset", {id: "bottombar"}, [
@@ -787,6 +792,11 @@ GameUI.prototype = {
   _updatePause: function() {
     var t = (this.game.paused) ? "Resume" : "Pause";
     $idx("pause-game", this.root).textContent = t;
+    if (this.game.paused) {
+      showNode($idx("pausescreen", this.root));
+    } else {
+      hideChildren($idx("game-layers", this.root));
+    }
   },
 
   /* Consistency */
