@@ -28,8 +28,7 @@ body, #game {
 .layer {
   visibility: hidden;
   opacity: 0;
-  transition: opacity 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
-              visibility 200ms step-start;
+  transition: opacity 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
 }
 .layer.selected {
   visibility: visible;
