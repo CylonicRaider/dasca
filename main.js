@@ -1195,7 +1195,7 @@ function init() {
       return;
     }
     var link = $id("file-download");
-    link.href = "data:text/base64," + b64encw(json2ascii(data));
+    link.href = "data:text/base64," + encodeURI(b64encw(json2ascii(data)));
     link.click();
   });
   $listen("uploadsave", "click", function() {
