@@ -1179,7 +1179,7 @@ function init() {
   $listen("exportsave", "click", function() {
     var data = storage.loadRaw();
     if (data) {
-      data = b64encw(data);
+      data = b64encw(json2ascii(data));
     } else {
       data = "";
     }
@@ -1195,7 +1195,7 @@ function init() {
       return;
     }
     var link = $id("file-download");
-    link.href = "data:text/base64," + b64encw(data);
+    link.href = "data:text/base64," + b64encw(json2ascii(data));
     link.click();
   });
   $listen("uploadsave", "click", function() {
