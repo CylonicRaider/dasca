@@ -412,17 +412,18 @@ Action.prototype = {
    * Arguments passed to run() are appended to the arguments stored in the
    * object. */
   run: function() {
+    // Implementation moved to the more-used cb().
+    return this.cb.apply(this, arguments);
+  },
+
+  /* Callback
+   * Many objects invoking others expect the functionality to be located at
+   * this attributes; this method is hence identical to run(). */
+  cb: function() {
     var self = findObject(this.self, this.env);
     var method = findObject(this.func, self);
     return method.apply(self,
-      Array.prototype.concat.apply(this.args, arguments));
-  },
-
-  /* Scheduler callback
-   * This method is identical to run(), aside from explicitly declaring
-   * the "now" parameter. */
-  cb: function(now) {
-    return this.run.apply(this, arguments);
+                        Array.prototype.concat.apply(this.args, arguments));
   },
 
   /* OOP boilerplate */
