@@ -211,7 +211,7 @@ h1 {
 }
 
 .item-card {
-  margin-bottom: 0.25em;
+  margin-bottom: 0.5em;
 }
 .item-card, .item-rows {
   display: flex;
@@ -224,6 +224,13 @@ h1 {
   cursor: pointer;
   outline-offset: -1px;
 }
+.item-card .item-icon:active, .item-card .item-icon:focus {
+  outline: 1px dotted #808080;
+}
+.item-card .item-icon:active {
+  outline-color: #c0c0c0;
+}
+
 .item-card .item-name, .item-card .item-rows {
   flex-grow: 1;
 }
