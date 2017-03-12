@@ -344,6 +344,19 @@ function deserialize(obj, env) {
   });
 }
 
+/* Turn a JSON string into an ASCII equivalent */
+function json2ascii(s) {
+  return s.replace(/[^ -~]/g, function(ch) {
+    s = ch.charCodeAt(0).toString(16);
+    switch (s.length) {
+      case 1: return "\\u000" + s;
+      case 2: return "\\u00" + s;
+      case 3: return "\\u0" + s;
+      case 4: return "\\u" + s;
+    }
+  });
+}
+
 /* Construct a new StorageCell
  * The object encapsulates the value associated with a particular
  * localStorage key, and additionally caches saved values in memory (in case
