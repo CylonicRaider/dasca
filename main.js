@@ -1196,7 +1196,6 @@ function init() {
     }
     var link = $id("file-download");
     link.href = "data:text/base64," + b64encw(data);
-    console.log(link);
     link.click();
   });
   $listen("uploadsave", "click", function() {
@@ -1208,7 +1207,6 @@ function init() {
     if (! file) return;
     var reader = new FileReader();
     reader.onload = function(evt) {
-      console.log(reader.result);
       storage.saveRaw(b64decw(reader.result));
       alert("OK");
     };
