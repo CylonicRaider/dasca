@@ -444,14 +444,29 @@ function GameStory(game) {
 GameStory.prototype = {
   /* Description of surroundings */
   DESCRIPTION_START: [
-    ["You are on the bridge of a spacecraft.", 5],
+    ["You are on the bridge of a spacecraft.", 4],
     ["The windows would provide a wide panorama onto (presumably) space " +
       "if they were not blocked by dark shutters.", 8],
     ["The large instrument panel is lifeless; all needles are resting at " +
       "zero.", 8],
-    ["You are strapped into a comfortable chair.", 5],
+    ["You are strapped into a comfortable chair.", 4],
     ["Behind you, there is a plain wall, pierced by a closed rectangular " +
-      "door, through which a round window peeks into a dark room.", 8]
+      "door, through which a round window peeks into a dark room.", 8],
+    [null, 0, "story._finishLookAroundStart"]
+  ],
+
+  /* Description of engine room */
+  DESCRIPTION_ENGINES: [
+    ["The room's walls are covered by semitranslucent panels. The labels " +
+      "are hardly decipherable under the weak light.", 8],
+    ["Three doors lead out of the room; apart from the one to the bridge, " +
+      "there is one opposite, and one leads through the \u201cfloor\u201d.",
+      8],
+    ["On the wall to the bridge, a big button of an unrecognizable color " +
+      "stands out.", 8],
+    ["There is a small handcrank nearby. It looks stiff, but still " +
+      "operational.", 8],
+    [null, 0, "story._finishLookAroundEngines"]
   ],
 
   /* Start */
@@ -485,34 +500,25 @@ GameStory.prototype = {
       "story.lookAroundStart").showWhenActive("start", "lighter");
   },
 
+  /* Show a story fragment */
+  _showStoryFragment: function(parts, delayIfNot) {
+    this.game.state.scheduler.addContTask(new StoryFragment(this.game,
+      parts, delayIfNot));
+  },
+
   /* Gather first impressions of the player's surroundings */
   lookAroundStart: function() {
     this.game.showTab("start", false);
     this.game.removeItem("look-around-start");
-    this.game.state.misc.descIndex = 0;
-    this.game.state.misc.descTime = null;
-    this.game.addContTask("story._checkDesc");
+    this._showStoryFragment(this.DESCRIPTION_START,
+                            "state.items.lighter.active");
   },
 
-  /* Add more description details */
-  _checkDesc: function(now) {
-    var ms = this.game.state.misc;
-    if (ms.descTime == null || ms.descTime <= now) {
-      if (ms.descIndex >= this.DESCRIPTION_START.length) {
-        this.game.removeItem("look-around-start");
-        this.game.addItem("Button", "pass-door", "Float through door",
-                          "story.goToEngines");
-        this.game.showItem("start", "pass-door");
-        return true;
-      }
-      if (this.game.state.items.lighter.active) {
-        var entry = this.DESCRIPTION[ms.descIndex++];
-        this.game.showMessage(entry[0]);
-        ms.descTime = now + entry[1];
-      } else {
-        ms.descTime = now + 1;
-      }
-    }
+  /* Finish the first story fragment */
+  _finishLookAroundStart: function() {
+    this.game.addItem("Button", "pass-door", "Float through door",
+                      "story.goToEngines");
+    this.game.showItem("start", "pass-door");
   },
 
   /* Move to the next room */
@@ -532,16 +538,12 @@ GameStory.prototype = {
   /* Look around there */
   lookAroundEngines: function() {
     this.game.removeItem("look-around-engines");
-    this.game.showMessage("The room's walls are covered by " +
-      "semitranslucent panels. The labels are hardly decipherable under " +
-      "the weak light.");
-    this.game.showMessage("Three doors lead out of the room; apart from " +
-      "the one to the bridge, there is one opposite to it, and one leads " +
-      "through the \u201cfloor\u201d.");
-    this.game.showMessage("On the wall to the bridge, a big button of an " +
-      "unrecognizable color stands out.");
-    this.game.showMessage("There is a small handcrank nearby. It looks " +
-      "stiff, but still operational.");
+    this._showStoryFragment(this.DESCRIPTION_ENGINES,
+                            "state.items.lighter.active");
+  },
+
+  /* Finish looking around the engine room */
+  _finishLookAroundEngines: function() {
     this.game.addItem("Crank", "crank", 3, 0.3);
     this.game.showItem("engines", "crank");
     this.game.addItem("Button", "start-engines", "Start engines",
@@ -558,6 +560,44 @@ GameStory.prototype = {
 
   /* OOP */
   constructor: GameStory
+};
+
+/* Show some messages with delays and optionally perform actions */
+function StoryFragment(game, parts, delayIfNot) {
+  this._game = game;
+  this.parts = parts;
+  this.delayIfNot = delayIfNot;
+  this.nextTime = null;
+  this.nextIndex = 0;
+}
+
+StoryFragment.prototype = {
+  /* Check whether a new story fragment should be displayed
+   * And do so if necessary. Return true when nothing further has to be
+   * done. */
+  cb: function(now) {
+    if (this.nextTime != null && now < this.nextTime) return;
+    if (this.nextIndex >= this.parts.length) return true;
+    if (this.delayIfNot && ! findObject(this.delayIfNot, this._game)) {
+      this.nextTime = now + 1;
+      return;
+    }
+    var part = this.parts[this.nextIndex++];
+    if (part[0] != null) this._game.showMessage(part[0]);
+    this.nextTime = now + part[1];
+    if (part.length > 2) {
+      var task = this._game.createTaskEx.apply(this._game, part.slice(2));
+      task.cb.apply(task, arguments);
+    }
+  },
+
+  /* OOP details */
+  constructor: StoryFragment,
+
+  /* Deserialization */
+  __reinit__: function(env) {
+    this._game = env.game;
+  }
 };
 
 /* The (serializable) state of a game
