@@ -460,8 +460,8 @@ GameStory.prototype = {
     ["The room's walls are covered by semitranslucent panels. The labels " +
       "are hardly decipherable under the weak light.", 8],
     ["Three doors lead out of the room; apart from the one to the bridge, " +
-      "there is one opposite, and one leads through the \u201cfloor\u201d.",
-      8],
+      "there is one opposite to it, and one leads through the " +
+      "\u201cfloor\u201d.", 8],
     ["On the wall to the bridge, a big button of an unrecognizable color " +
       "stands out.", 8],
     ["There is a small handcrank nearby. It looks stiff, but still " +
