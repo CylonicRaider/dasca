@@ -544,7 +544,7 @@ GameStory.prototype = {
 
   /* Finish looking around the engine room */
   _finishLookAroundEngines: function() {
-    this.game.addItem("Crank", "crank", 3, 0.3);
+    this.game.addItem("Crank", "crank", 3, 1, 0.3);
     this.game.showItem("engines", "crank");
     this.game.addItem("Button", "start-engines", "Start engines",
                       "story.tryStartEngines");
@@ -1138,24 +1138,83 @@ ActiveItem.defineType("Lighter", {
  * ones fail. */
 ActiveItem.defineType("Crank", {
   /* Initialize instance */
-  __init__: function(speedcap, speedincr) {
+  __init__: function(speedcap, speedincr, speeddecr) {
+    this.rotation = 0;
+    this.speed = 0;
     this.speedcap = speedcap;
     this.speedincr = speedincr;
+    this.speeddecr = speeddecr;
+    this._turning = false;
+    this._nextFrame = null;
+    this._updated = null;
+    this._icon = null;
+    this._meter = null;
   },
 
   /* Render the item into a UI node */
   _render: function() {
     var ret = $makeNode("div", "item-card fade-in", [
-      ["span", "item-icon item-icon-interactive img-crank", {tabIndex: 0}],
+      ["span", "item-icon item-icon-interactive", {tabIndex: 0}, [
+        ["span", "item-icon-inner img-crank"]
+      ]],
       ["div", "item-rows", [
         ["b", "item-name", "Crank"],
         ["i", null, "NYI"],
         ["hr"],
         ["button", "btn btn-small item-use", "Turn"],
-        ["div", "item-bar item-bar-pm", [["div", "item-bar-content"]]]
+        ["div", "item-bar item-bar", [["div", "item-bar-content"]]]
       ]]
     ]);
+    var self = this;
+    var icon = $sel(".item-icon", ret), button = $sel(".item-use", ret);
+    [icon, button].forEach(function(node) {
+      node.addEventListener("mousedown", self._turn.bind(self, true));
+      node.addEventListener("mouseup", self._turn.bind(self, false));
+      node.addEventListener("mouseout", self._turn.bind(self, false));
+      node.addEventListener("blur", self._turn.bind(self, false));
+    });
+    this._icon = $sel(".item-icon span", ret);
+    this._meter = $sel(".item-bar-content", ret);
     return ret;
+  },
+
+  /* Start or stop turning the crank */
+  _turn: function(state) {
+    this._turning = state;
+    if (this._turning && ! this._nextFrame)
+      this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
+  },
+
+  /* Update the animation */
+  _updateAnim: function(now) {
+    if (this._updated == null) {
+      this._updated = now;
+      this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
+      return;
+    }
+    var delta = (now - this._updated) / 1000.0;
+    this._updated = now;
+    if (this._turning) {
+      this.speed += this.speedincr * delta;
+      if (this.speed > this.speedcap) this.speed = this.speedcap;
+    } else {
+      this.speed -= this.speeddecr * delta;
+      if (this.speed < 0) this.speed = 0;
+    }
+    if (this._meter == null)
+      this._meter = $sel(".item-bar-content", this.render());
+    if (this.speed == 0) {
+      this._nextFrame = null;
+      this._updated = null;
+      this._meter.style.width = "0";
+      return;
+    }
+    if (this._icon == null)
+      this._icon = $sel(".item-icon span", this.render());
+    this.rotation = (this.rotation + this.speed * delta) % 1.0;
+    this._icon.style.transform = "rotate(" + this.rotation * 360 + "deg)";
+    this._meter.style.width = (this.speed / this.speedcap * 100) + "%";
+    this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
   }
 });
 
