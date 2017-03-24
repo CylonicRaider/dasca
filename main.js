@@ -611,7 +611,7 @@ StoryFragment.prototype = {
 function GameState(game) {
   this._game = game;
   // Scheduler.
-  this.scheduler = Scheduler.makeStrobe(20);
+  this.scheduler = Scheduler.makeStrobe(60);
   // {string -> bool}. Can be used to show one-off messages.
   this.flags = {};
   // [string]. Stores log messages.
@@ -1167,7 +1167,7 @@ ActiveItem.defineType("Crank", {
         ["i", null, "NYI"],
         ["hr"],
         ["button", "btn btn-small item-use", "Turn"],
-        ["div", "item-bar item-bar", [["div", "item-bar-content"]]]
+        ["div", "item-bar", [["div", "item-bar-content"]]]
       ]]
     ]);
     var self = this;
