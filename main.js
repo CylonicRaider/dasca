@@ -161,6 +161,8 @@ function hideChildren(node) {
  * argument. */
 function Variable(value) {
   this.value = value;
+  this.min = null;
+  this.max = null;
   this.handlers = [];
   this.lateHandlers = [];
   this.lastUpdate = null;
@@ -180,6 +182,8 @@ Variable.prototype = {
       }
     }
     this.value += incr;
+    if (this.min != null && this.value < this.min) this.value = this.min;
+    if (this.max != null && this.value > this.max) this.value = this.max;
     this.lastUpdate = now;
   },
 
