@@ -1176,7 +1176,10 @@ ActiveItem.defineType("Crank", {
       node.addEventListener("mousedown", self._turn.bind(self, true));
       node.addEventListener("mouseup", self._turn.bind(self, false));
       node.addEventListener("mouseout", self._turn.bind(self, false));
-      node.addEventListener("blur", self._turn.bind(self, false));
+      node.addEventListener("blur", function(evt) {
+        if (evt.relatedTarget != icon && evt.relatedTarget != button)
+          self._turn(false);
+      });
     });
     this._icon = $sel(".item-icon span", ret);
     this._meter = $sel(".item-bar-content", ret);
