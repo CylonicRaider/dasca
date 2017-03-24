@@ -1052,20 +1052,15 @@ ActiveItem.defineType("Lighter", {
   __init__: function(capacity, fill) {
     if (! fill) fill = 0;
     var v = this._game.addVariable(this.name + "/fill", fill);
-    v.maximum = capacity;
+    v.min = 0;
+    v.max = capacity;
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
   },
 
   /* Deplete the lighter's fuel */
   _deplete: function(variable, delta) {
-    if (! this.active) return 0;
-    var decr = delta * 0.1;
-    if (decr > variable.value) {
-      decr = variable.value;
-      this.setActive(false);
-    }
-    return -decr;
+    return (this.active) ? delta * -0.1 : 0;
   },
 
   /* Render the item into a UI node */
@@ -1097,7 +1092,8 @@ ActiveItem.defineType("Lighter", {
       this._meter = $sel(".item-bar-content", this.render());
     }
     var v = this._getVar();
-    var f = Math.round(v.value / v.maximum * 10000) / 100;
+    if (v.value == 0 && this.active) this.setActive(false);
+    var f = Math.round(v.value / v.max * 10000) / 100;
     var fill = f + "%";
     if (this._meter.style.width != fill)
       this._meter.style.width = fill;
