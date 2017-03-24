@@ -1139,9 +1139,14 @@ ActiveItem.defineType("Lighter", {
 ActiveItem.defineType("Crank", {
   /* Initialize instance */
   __init__: function(speedcap, speedincr, speeddecr) {
+    var v = this._game.addVariable(this.name + "/speed", 0);
+    v.min = 0;
+    v.max = speedcap;
+    v.addHandler(this._makeAction("_getIncrement"));
+    v.addLateHandler(this._makeAction("_updateSpeed"));
     this.rotation = 0;
-    this.speed = 0;
-    this.speedcap = speedcap;
+    this._speed = 0;
+    this._speedcap = speedcap;
     this.speedincr = speedincr;
     this.speeddecr = speeddecr;
     this._turning = false;
@@ -1178,6 +1183,20 @@ ActiveItem.defineType("Crank", {
     return ret;
   },
 
+  /* Get the current increment for the variable */
+  _getIncrement: function() {
+    return (this._turning) ? this.speedincr : -this.speeddecr;
+  },
+
+  /* Update the rotation speed */
+  _updateSpeed: function() {
+    var variable = this._game.state.variables[this.name + "/speed"];
+    this._speed = variable.value;
+    if (this._meter == null)
+      this._meter = $sel(".item-bar-content", this.render());
+    this._meter.style.width = (this._speed / variable.max * 100) + "%";
+  },
+
   /* Start or stop turning the crank */
   _turn: function(state) {
     this._turning = state;
@@ -1194,26 +1213,12 @@ ActiveItem.defineType("Crank", {
     }
     var delta = (now - this._updated) / 1000.0;
     this._updated = now;
-    if (this._turning) {
-      this.speed += this.speedincr * delta;
-      if (this.speed > this.speedcap) this.speed = this.speedcap;
-    } else {
-      this.speed -= this.speeddecr * delta;
-      if (this.speed < 0) this.speed = 0;
+    if (this._speed) {
+      if (this._icon == null)
+        this._icon = $sel(".item-icon span", this.render());
+      this.rotation = (this.rotation + this._speed * delta) % 1.0;
+      this._icon.style.transform = "rotate(" + this.rotation * 360 + "deg)";
     }
-    if (this._meter == null)
-      this._meter = $sel(".item-bar-content", this.render());
-    if (this.speed == 0) {
-      this._nextFrame = null;
-      this._updated = null;
-      this._meter.style.width = "0";
-      return;
-    }
-    if (this._icon == null)
-      this._icon = $sel(".item-icon span", this.render());
-    this.rotation = (this.rotation + this.speed * delta) % 1.0;
-    this._icon.style.transform = "rotate(" + this.rotation * 360 + "deg)";
-    this._meter.style.width = (this.speed / this.speedcap * 100) + "%";
     this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
   }
 });
