@@ -1187,8 +1187,9 @@ ActiveItem.defineType("Crank", {
   },
 
   /* Get the current increment for the variable */
-  _getIncrement: function() {
-    return (this._turning) ? this.speedincr : -this.speeddecr;
+  _getIncrement: function(variable, delta) {
+    return (this._turning) ? this.speedincr * delta :
+      -this.speeddecr * delta;
   },
 
   /* Update the rotation speed */
@@ -1215,12 +1216,14 @@ ActiveItem.defineType("Crank", {
       return;
     }
     var delta = (now - this._updated) / 1000.0;
-    this._updated = now;
     if (this._speed) {
+      this._updated = now;
       if (this._icon == null)
         this._icon = $sel(".item-icon span", this.render());
       this.rotation = (this.rotation + this._speed * delta) % 1.0;
       this._icon.style.transform = "rotate(" + this.rotation * 360 + "deg)";
+    } else {
+      this._updated = null;
     }
     this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
   }
