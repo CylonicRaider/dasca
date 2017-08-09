@@ -1183,6 +1183,7 @@ ActiveItem.defineType("Crank", {
     });
     this._icon = $sel(".item-icon span", ret);
     this._meter = $sel(".item-bar-content", ret);
+    this._icon.style.transform = "rotate(" + this.rotation * 360 + "deg)";
     return ret;
   },
 
