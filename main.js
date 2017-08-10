@@ -1164,7 +1164,6 @@ ActiveItem.defineType("Crank", {
       ]],
       ["div", "item-rows", [
         ["b", "item-name", "Crank"],
-        ["i", null, "NYI"],
         ["hr"],
         ["button", "btn btn-small item-use", "Turn"],
         ["div", "item-bar", [["div", "item-bar-content"]]]
