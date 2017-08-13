@@ -712,11 +712,19 @@ GameUI.prototype = {
     return this.root;
   },
 
+  /* Perform additional adjustments that must happen when the root node is in
+   * the DOM */
+  _postRender: function() {
+    var msgbar = $idx("messagebar", this.root);
+    msgbar.scrollTop = msgbar.scrollHeight;
+  },
+
   /* Embed the game's UI into the given DOM node
    * If not already done, the UI is constructed. */
   mount: function(parent) {
     this.parent = parent;
     parent.appendChild(this.render());
+    this._postRender();
     return this.root;
   },
 
