@@ -344,6 +344,61 @@ function deserialize(obj, env) {
   });
 }
 
+/* Turn a JSON string into an ASCII equivalent */
+function json2ascii(s) {
+  return s.replace(/[^ -~]/g, function(ch) {
+    s = ch.charCodeAt(0).toString(16);
+    switch (s.length) {
+      case 1: return "\\u000" + s;
+      case 2: return "\\u00" + s;
+      case 3: return "\\u0" + s;
+      case 4: return "\\u" + s;
+    }
+  });
+}
+
+/* Construct a new StorageCell
+ * The object encapsulates the value associated with a particular
+ * localStorage key, and additionally caches saved values in memory (in case
+ * localStorage is not available). */
+function StorageCell(name) {
+  this.name = name;
+  this.rawValue = undefined;
+}
+
+StorageCell.prototype = {
+  /* Load the value without deserializing */
+  loadRaw: function() {
+    if (window.localStorage) {
+      var val = localStorage.getItem(this.name);
+      if (val != null)
+        this.rawValue = val;
+    }
+    return this.rawValue;
+  },
+
+  /* Load the value and deserialize it (in the given environment) */
+  load: function(env) {
+    return deserialize(this.loadRaw(), env);
+  },
+
+  /* Save the given value without serialization */
+  saveRaw: function(val) {
+    this.rawValue = val;
+    if (window.localStorage) {
+      localStorage.setItem(this.name, this.rawValue);
+    }
+  },
+
+  /* Serialize the given value and save it */
+  save: function(val) {
+    this.saveRaw(serialize(val));
+  },
+
+  /* OOP... */
+  constructor: StorageCell
+};
+
 /* *** Action ***
  * A serializable wrapper around a method call. Can be used as a callback for
  * Scheduler; for that reason, a property named "time" is serialized and
@@ -370,17 +425,18 @@ Action.prototype = {
    * Arguments passed to run() are appended to the arguments stored in the
    * object. */
   run: function() {
+    // Implementation moved to the more-used cb().
+    return this.cb.apply(this, arguments);
+  },
+
+  /* Callback
+   * Many objects invoking others expect the functionality to be located at
+   * this attributes; this method is hence identical to run(). */
+  cb: function() {
     var self = findObject(this.self, this.env);
     var method = findObject(this.func, self);
     return method.apply(self,
-      Array.prototype.concat.apply(this.args, arguments));
-  },
-
-  /* Scheduler callback
-   * This method is identical to run(), aside from explicitly declaring
-   * the "now" parameter. */
-  cb: function(now) {
-    return this.run.apply(this, arguments);
+                        Array.prototype.concat.apply(this.args, arguments));
   },
 
   /* OOP boilerplate */

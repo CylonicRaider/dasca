@@ -18,6 +18,10 @@ function $sel(sel, elem) {
 function $selAll(sel, elem) {
   return (elem || document).querySelectorAll(sel);
 }
+function $listen(elem, event, callback) {
+  if (typeof elem == "string") elem = $id(elem);
+  elem.addEventListener(event, callback);
+}
 
 /* Create a DOM element */
 function $makeNode(tag, className, attrs, children) {
@@ -76,6 +80,28 @@ function $makeNode(tag, className, attrs, children) {
   return ret;
 }
 
+/* Replace a CSS class with another */
+function $replaceClass(elem, from, to) {
+  if (elem.classList.contains(from)) {
+    elem.classList.remove(from);
+    elem.classList.add(to);
+  }
+}
+
+/* base64-encode a string with line wrapping */
+function b64encw(s) {
+  // "Binary" to "ASCII"?
+  return btoa(s).replace(/.{1,78}/g, "$&\n").trim();
+}
+
+/* Undo b64encw */
+function b64decw(s) {
+  // atob is tolerant enough. :}
+  return atob(s);
+}
+
+/* *** UI control functions *** */
+
 /* Show the given UI element, hiding any siblings and showing all its
  * showable parents */
 function showNode(node) {
@@ -103,7 +129,7 @@ function showNode(node) {
 
 /* Hide all selectable children of node
  * Approximate opposite of showNode. */
-function hideNodes(node) {
+function hideChildren(node) {
   if (! node) return;
   /* Resolve ID-s */
   if (typeof node == "string") node = $id("node");
@@ -135,6 +161,8 @@ function hideNodes(node) {
  * argument. */
 function Variable(value) {
   this.value = value;
+  this.min = null;
+  this.max = null;
   this.handlers = [];
   this.lateHandlers = [];
   this.lastUpdate = null;
@@ -154,6 +182,8 @@ Variable.prototype = {
       }
     }
     this.value += incr;
+    if (this.min != null && this.value < this.min) this.value = this.min;
+    if (this.max != null && this.value > this.max) this.value = this.max;
     this.lastUpdate = now;
   },
 
@@ -190,27 +220,45 @@ Variable.prototype = {
   constructor: Variable
 };
 
-/* The main game object */
-function Game(state) {
+/* The main game object
+ * state is a game state to restore (see below for details); storage is a
+ * StorageCell instance used for state persistence (or absent for none).
+ * If state is falsy, a new one is created; otherwise, state is deserialized.
+ * If storage is truthy and state is null, the constructor attempts to load
+ * a state from the storage (thus, passing an empty string as the state
+ * forces creating a new one). */
+function Game(state, storage) {
   this._env = Object.create(window);
   this._env.game = this;
-  if (state == null) {
+  if (storage && state == null) {
+    state = storage.loadRaw();
+  }
+  if (! state) {
     this.state = new GameState(this);
     this.state.scheduler.addContTask(this.createTask("_updateVars"));
   } else {
     this.state = deserialize(state, this._env);
   }
+  this.storage = storage;
   this.ui = new GameUI(this);
   this.story = new GameStory(this);
   this.running = true;
   this.paused = false;
+  this.ui.render();
+  if (state) {
+    this.pause(false);
+  } else {
+    this.story.init();
+  }
   this.state.scheduler.run();
 }
 
 Game.prototype = {
   /* Save the game state into a string */
   save: function() {
-    return serialize(this.state);
+    var st = serialize(this.state);
+    if (this.storage) this.storage.saveRaw(st);
+    return st;
   },
 
   /* Mount the game into the given node */
@@ -221,11 +269,6 @@ Game.prototype = {
   /* Unmount the game from its current parent node, if any */
   unmount: function() {
     return this.ui.unmount();
-  },
-
-  /* Start the game */
-  start: function() {
-    this.story.init();
   },
 
   /* Get the value of a flag */
@@ -315,10 +358,11 @@ Game.prototype = {
   },
 
   /* Select a UI tab */
-  showTab: function(name, hidden, noShow) {
+  showTab: function(name, hidden) {
     if (hidden != null) this.state.tabs[name].hidden = hidden;
-    this.ui._showTab(name, this.state.tabs[name].hidden, noShow);
+    this.state.currentTab = name;
     this.ui._updateItems(name);
+    this.ui._showTab(name, this.state.tabs[name].hidden);
   },
 
   /* Add an item */
@@ -335,23 +379,25 @@ Game.prototype = {
   /* Show an item in a given UI tab, or hide it from there
    * Items can be in multiple tabs; their nodes are transparently reparented
    * on tab switches. */
-  showItem: function(name, tab, show) {
+  showItem: function(tab, name, show) {
     if (show == null) show = true;
     var items = this.state.tabs[tab].items;
     var idx = items.indexOf(name);
     if (idx != -1) items.splice(idx, 1);
     if (show) items.push(name);
-    this.ui._updateItems(tab);
+    this.ui._showItem(tab, name);
   },
 
   /* Hide the given item from sight */
-  hideItem: function(name, tab) {
+  hideItem: function(tab, name) {
     /* Actually already implemented */
-    this.showItem(name, tab, false);
+    this.showItem(tba, name, false);
   },
 
   /* Remove the named item from storage and display */
   removeItem: function(name) {
+    if (this.state.items[name])
+      this.state.items[name].__remove__();
     delete this.state.items[name];
     for (var t in this.state.tabs) {
       if (! this.state.tabs.hasOwnProperty(t)) continue;
@@ -372,6 +418,7 @@ Game.prototype = {
 
   /* Stop running the game */
   exit: function() {
+    this.save();
     this.state.scheduler.running = false;
     this.running = false;
   },
@@ -400,16 +447,30 @@ function GameStory(game) {
 
 GameStory.prototype = {
   /* Description of surroundings */
-  DESCRIPTION: [
-    ["You are on the bridge of a spacecraft.", 5],
+  DESCRIPTION_START: [
+    ["You are on the bridge of a spacecraft.", 4],
     ["The windows would provide a wide panorama onto (presumably) space " +
       "if they were not blocked by dark shutters.", 8],
     ["The large instrument panel is lifeless; all needles are resting at " +
       "zero.", 8],
-    ["You are strapped into a comfortable chair.", 5],
+    ["You are strapped into a comfortable chair.", 4],
     ["Behind you, there is a plain wall, pierced by a closed rectangular " +
-      "door, through which a round window peeks into a dark corridor.", 8],
-    [["i", null, "\u2014 T.B.C. \u2014"], 1]
+      "door, through which a round window peeks into a dark room.", 8],
+    [null, 0, "story._finishLookAroundStart"]
+  ],
+
+  /* Description of engine room */
+  DESCRIPTION_ENGINES: [
+    ["The room's walls are covered by semitranslucent panels. The labels " +
+      "are hardly decipherable under the weak light.", 8],
+    ["Three doors lead out of the room; apart from the one to the bridge, " +
+      "there is one opposite to it, and one leads through the " +
+      "\u201cfloor\u201d.", 8],
+    ["On the wall to the bridge, a big button of an unrecognizable color " +
+      "stands out.", 8],
+    ["There is a small handcrank nearby. It looks stiff, but still " +
+      "operational.", 8],
+    [null, 0, "story._finishLookAroundEngines"]
   ],
 
   /* Start */
@@ -429,7 +490,7 @@ GameStory.prototype = {
   showStart: function() {
     this.game.addItem("Button", "show-lighter", "Check pockets",
                       "story.showLighter");
-    this.game.showItem("show-lighter", "start");
+    this.game.showItem("start", "show-lighter");
     this.game.showTab("start");
   },
 
@@ -437,47 +498,110 @@ GameStory.prototype = {
   showLighter: function() {
     this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
-    var lighter = this.game.addItem("Lighter", "lighter", 100, 70);
-    lighter.onchange = this.game.createTask("story.onlighterchange");
-    this.game.showItem("lighter", "start");
-    var btn = this.game.addItem("Button", "look-around", "Look around",
-                                "story.lookAround");
-    btn.classes = "fade-in";
+    this.game.addItem("Lighter", "lighter", 100, 70);
+    this.game.showItem("start", "lighter");
+    this.game.addItem("Button", "look-around-start", "Look around",
+      "story.lookAroundStart").showWhenActive("start", "lighter");
   },
 
-  /* Called when the burning state of the lighter changes */
-  onlighterchange: function(lighter) {
-    if (this.game.state.misc.descIndex == null)
-      this.game.showItem("look-around", "start", lighter.burning);
+  /* Show a story fragment */
+  _showStoryFragment: function(parts, delayIfNot) {
+    this.game.state.scheduler.addContTask(new StoryFragment(this.game,
+      parts, delayIfNot));
   },
 
   /* Gather first impressions of the player's surroundings */
-  lookAround: function() {
+  lookAroundStart: function() {
     this.game.showTab("start", false);
-    this.game.hideItem("look-around", "start");
-    this.game.state.misc.descIndex = 0;
-    this.game.state.misc.descTime = null;
-    this.game.addContTask("story._checkDesc");
+    this.game.removeItem("look-around-start");
+    this._showStoryFragment(this.DESCRIPTION_START,
+                            "state.items.lighter.active");
   },
 
-  /* Add more description details */
-  _checkDesc: function(now) {
-    var ms = this.game.state.misc;
-    if (ms.descTime == null || ms.descTime <= now) {
-      if (ms.descIndex >= this.DESCRIPTION.length)
-        return true;
-      if (this.game.state.items.lighter.burning) {
-        var entry = this.DESCRIPTION[ms.descIndex++];
-        this.game.showMessage(entry[0]);
-        ms.descTime = now + entry[1];
-      } else {
-        ms.descTime = now + 1;
-      }
-    }
+  /* Finish the first story fragment */
+  _finishLookAroundStart: function() {
+    this.game.addItem("Button", "pass-door", "Float through door",
+                      "story.goToEngines");
+    this.game.showItem("start", "pass-door");
+  },
+
+  /* Move to the next room */
+  goToEngines: function() {
+    this.game.removeItem("pass-door");
+    if (this.game.state.items.lighter.active)
+      this.game.showMessage("The air flow lets the flame flare to a " +
+        "bright yellow.");
+    this.game.showMessage("You open the door and float through it.");
+    this.game.addTab("engines", "Engine room");
+    this.game.showItem("engines", "lighter");
+    this.game.addItem("Button", "look-around-engines", "Look around",
+      "story.lookAroundEngines").showWhenActive("engines", "lighter");
+    this.game.showTab("engines");
+  },
+
+  /* Look around there */
+  lookAroundEngines: function() {
+    this.game.removeItem("look-around-engines");
+    this._showStoryFragment(this.DESCRIPTION_ENGINES,
+                            "state.items.lighter.active");
+  },
+
+  /* Finish looking around the engine room */
+  _finishLookAroundEngines: function() {
+    this.game.addItem("Crank", "crank", 3, 1, 0.3);
+    this.game.showItem("engines", "crank");
+    this.game.addItem("Button", "start-engines", "Start engines",
+                      "story.tryStartEngines");
+    this.game.showItem("engines", "start-engines");
+    this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
+  },
+
+  /* Attempt starting the engines
+   * Will fail if there is not enough energy. */
+  tryStartEngines: function() {
+    this.game.showMessage("Nothing happens.");
   },
 
   /* OOP */
   constructor: GameStory
+};
+
+/* Show some messages with delays and optionally perform actions */
+function StoryFragment(game, parts, delayIfNot) {
+  this._game = game;
+  this.parts = parts;
+  this.delayIfNot = delayIfNot;
+  this.nextTime = null;
+  this.nextIndex = 0;
+}
+
+StoryFragment.prototype = {
+  /* Check whether a new story fragment should be displayed
+   * And do so if necessary. Return true when nothing further has to be
+   * done. */
+  cb: function(now) {
+    if (this.nextTime != null && now < this.nextTime) return;
+    if (this.nextIndex >= this.parts.length) return true;
+    if (this.delayIfNot && ! findObject(this.delayIfNot, this._game)) {
+      this.nextTime = now + 1;
+      return;
+    }
+    var part = this.parts[this.nextIndex++];
+    if (part[0] != null) this._game.showMessage(part[0]);
+    this.nextTime = now + part[1];
+    if (part.length > 2) {
+      var task = this._game.createTaskEx.apply(this._game, part.slice(2));
+      task.cb.apply(task, arguments);
+    }
+  },
+
+  /* OOP details */
+  constructor: StoryFragment,
+
+  /* Deserialization */
+  __reinit__: function(env) {
+    this._game = env.game;
+  }
 };
 
 /* The (serializable) state of a game
@@ -487,7 +611,7 @@ GameStory.prototype = {
 function GameState(game) {
   this._game = game;
   // Scheduler.
-  this.scheduler = Scheduler.makeStrobe(20);
+  this.scheduler = Scheduler.makeStrobe(60);
   // {string -> bool}. Can be used to show one-off messages.
   this.flags = {};
   // [string]. Stores log messages.
@@ -534,13 +658,18 @@ GameUI.prototype = {
   render: function() {
     if (this.root == null) {
       this.root = $makeNode("div", {id: "game-content"}, [
-        ["div", "row row-all", [
-          ["div", "col col-3of10 inset", [
-            ["div", {id: "messagebar", lang: "en-US"}]
+        ["div", "pane row-all", {id: "game-layers"}, [
+          ["div", "layer selected row", [
+            ["div", "col col-3of10 inset", [
+              ["div", {id: "messagebar", lang: "en-US"}]
+            ]],
+            ["div", "col col-all", [
+              ["div", "row row-small row-btn inset", {id: "tabbar"}],
+              ["div", "row row-all pane", {id: "mainpane"}]
+            ]]
           ]],
-          ["div", "col col-all", [
-            ["div", "row row-small row-btn inset", {id: "tabbar"}],
-            ["div", "row row-all pane", {id: "mainpane"}]
+          ["div", "selectable layer text-popup shade", {id: "pausescreen"}, [
+            ["h3", null, "Paused"]
           ]]
         ]],
         ["div", "row row-small inset", {id: "bottombar"}, [
@@ -548,17 +677,18 @@ GameUI.prototype = {
           ["div", "col col-all"],
           ["button", "btn btn-small", {id: "pause-game"}, "Pause"],
           ["hr"],
-          ["button", "btn btn-small", {id: "exit-game"}, "Exit"]
+          ["button", "btn btn-small", {id: "exit-game",
+            title: "Save game and exit"}, "Exit"]
         ]]
       ]);
-      $idx("pause-game", this.root).addEventListener("click", function() {
+      $listen($idx("pause-game", this.root), "click", function() {
         this.game.pause();
       }.bind(this));
-      $idx("exit-game", this.root).addEventListener("click", function() {
+      $listen($idx("exit-game", this.root), "click", function() {
         this.game.exit();
         showNode("titlescreen");
       }.bind(this));
-      $idx("credits-game", this.root).addEventListener("click", function() {
+      $listen($idx("credits-game", this.root), "click", function() {
         this.game.pause(true);
         showNode("creditscreen");
       }.bind(this));
@@ -572,9 +702,21 @@ GameUI.prototype = {
         if (! state.tabs.hasOwnProperty(key)) continue;
         this._addTab(key, state.tabs[key].name, state.tabs[key]);
       }
+      var curTab = this.game.state.currentTab;
+      if (curTab) {
+        this._updateItems(curTab);
+        this._showTab(curTab, this.game.state.tabs[curTab].hidden);
+      }
       this._updatePause();
     }
     return this.root;
+  },
+
+  /* Perform additional adjustments that must happen when the root node is in
+   * the DOM */
+  _postRender: function() {
+    var msgbar = $idx("messagebar", this.root);
+    msgbar.scrollTop = msgbar.scrollHeight;
   },
 
   /* Embed the game's UI into the given DOM node
@@ -582,6 +724,7 @@ GameUI.prototype = {
   mount: function(parent) {
     this.parent = parent;
     parent.appendChild(this.render());
+    this._postRender();
     return this.root;
   },
 
@@ -606,7 +749,7 @@ GameUI.prototype = {
   _addTab: function(name, dispname, options) {
     if (! options) options = {};
     this._tabButtons[name] = $makeNode("button",
-      "btn btn-small fade-in-fast", {id: "tabbtn-" + name}, [dispname]);
+      "btn btn-small fade-in", {id: "tabbtn-" + name}, [dispname]);
     this._tabButtons[name].addEventListener("click", function() {
       this.game.showTab(name);
     }.bind(this));
@@ -621,15 +764,18 @@ GameUI.prototype = {
   },
 
   /* Show a UI tab */
-  _showTab: function(name, hidden, noShow) {
+  _showTab: function(name, hidden) {
     var tabbtn = this._tabButtons[name];
     var tabbar = $idx("tabbar", this.root);
     if (! hidden && ! tabbar.contains(tabbtn)) {
       tabbar.appendChild(tabbtn);
       this._sortTabs();
     }
-    if (! noShow)
-      showNode(this._tabs[name]);
+    for (var node = $idx("tab-" + name, this.root).firstElementChild;
+         node; node = node.nextElementSibling) {
+      $replaceClass(node, "fade-in", "fade-in-suppressed");
+    }
+    showNode(this._tabs[name]);
   },
 
   /* Ensure the UI tab buttons are in the correct order */
@@ -657,6 +803,13 @@ GameUI.prototype = {
     return this._items[name];
   },
 
+  /* Show an item in a tab */
+  _showItem: function(tabname, name) {
+    if (tabname == this.game.state.currentTab)
+      $replaceClass(this._getItem(name), "fade-in-suppressed", "fade-in");
+    this._updateItems(tabname);
+  },
+
   /* Ensure all items are correctly present in a tab */
   _updateItems: function(tabname) {
     var tabNode = $idx("tab-" + tabname, this.root);
@@ -668,7 +821,8 @@ GameUI.prototype = {
       var node = this._getItem(order[i]);
       if (node.parentNode != tabNode) {
         tabNode.insertBefore(node, lastNode);
-      } else if (node.nextElementSibling != lastNode) {
+      }
+      while (node.nextElementSibling != lastNode) {
         tabNode.removeChild(node.nextElementSibling);
       }
       lastNode = node;
@@ -682,7 +836,7 @@ GameUI.prototype = {
   /* Remove the named item again */
   _removeItem: function(name) {
     var it = this._items[name];
-    if (it) it.parentNode.removeChild(it);
+    if (it && it.parentNode) it.parentNode.removeChild(it);
     delete this._items[name];
   },
 
@@ -690,6 +844,11 @@ GameUI.prototype = {
   _updatePause: function() {
     var t = (this.game.paused) ? "Resume" : "Pause";
     $idx("pause-game", this.root).textContent = t;
+    if (this.game.paused) {
+      showNode($idx("pausescreen", this.root));
+    } else {
+      hideChildren($idx("game-layers", this.root));
+    }
   },
 
   /* Consistency */
@@ -697,10 +856,13 @@ GameUI.prototype = {
 };
 
 /* An Item encapsulates a single object the player can interact with
- * Items must be serializable; hence, non-serializable properties must
- * be prefixed with underscores.
- * Arguments after game are passed to the __init__ method (if any)
- * variadically. */
+ * Item-s must be serializable; hence, non-serializable properties must be
+ * prefixed with underscores.
+ * Arguments after game and name are passed to the __init__ method (if any)
+ * variadically.
+ * The special method __remove__ is invoked with no arguments and the return
+ * value ignored when the item is being removed from the game; it should not
+ * be used thereafter. */
 function Item(game, name) {
   this._game = game;
   this.name = name;
@@ -737,25 +899,84 @@ Item.prototype = {
   }
 };
 
+/* An item that can be activated and deactivated
+ * The use() method is specified to toggle the activity state (subtypes may
+ * override this); changing the activity triggers listeners.
+ */
+function ActiveItem(game, name) {
+  this.active = false;
+  this.listeners = [];
+  Item.apply(this, arguments);
+}
+
+ActiveItem.prototype = Object.create(Item.prototype);
+
+/* Use the item in some generic way */
+ActiveItem.prototype.use = function() {
+  this.setActive(! this.active);
+};
+
+/* Set the activity flag
+ * Returns whether the change has been successful. */
+ActiveItem.prototype.setActive = function(state) {
+  if (state == this.active) return false;
+  this.active = state;
+  for (var i = 0; i < this.listeners.length; i++) {
+    if (this.listeners[i].cb(this))
+      this.listeners.splice(i--, 1);
+  }
+};
+
+/* Convenience function for adding an Action as a change listener
+ * The invoked method receives -- aside from fixed arguments that are given
+ * to this method variadically -- one single argument, namely this item.
+ * If the return value of the listener method is true, the listener is
+ * removed. */
+ActiveItem.prototype.addListener = function(method) {
+  this.listeners.push(this._game.createTask.apply(this._game, arguments));
+};
+
+/* Remove a listener for the named method
+ * Since the identities of Action objects are not preserved, this method is
+ * named differently and performs fuzzy matching on the subject and method
+ * name. */
+ActiveItem.prototype.removeListenerFor = function(method) {
+  var probe = this._game.createTask(method);
+  for (var i = 0; i < this.listeners.length; i++) {
+    var l = this.listeners[i];
+    if (l instanceof Action && l.self == probe.self && l.func == probe.func) {
+      this.listeners.splice(i, 1);
+      break;
+    }
+  }
+};
+
+/* OOP stuff */
+ActiveItem.prototype.constructor = ActiveItem;
+
 /* Define an Item subtype
  * A constructor with the given name is created; (own) properties are copied
  * from props into the prototype. The constructor and __sername__ properties
  * are set automatically. */
 Item.defineType = function(name, props) {
+  /* Allow subclasses of Item to use this */
+  var base = this;
   /* Create constructor function
    * There seems not to be any method actually supported by reasonably recent
    * browsers to do that but manual construction. */
   var func = eval(
     "(function " + name + "(game, name) {\n" +
-    "  Item.apply(this, arguments);\n" +
+    "  base.apply(this, arguments);\n" +
     "})");
   /* Create prototype */
-  func.prototype = Object.create(Item.prototype);
+  func.prototype = Object.create(base.prototype);
   for (var k in props) {
     if (props.hasOwnProperty(k))
       func.prototype[k] = props[k];
   }
-  /* Add special properties */
+  /* Add special properties
+   * All concrete item types (including those of subclasses) are intentionally
+   * stored in Item. */
   func.prototype.constructor = func;
   func.prototype.__sername__ = "Item." + name;
   /* Install into Item */
@@ -763,6 +984,22 @@ Item.defineType = function(name, props) {
   /* Return something */
   return func;
 };
+
+/* Allow deriving concrete item types from ActiveItem */
+ActiveItem.defineType = Item.defineType;
+
+/* A featureless piece of text */
+Item.defineType("Label", {
+  /* Initialize an instance */
+  __init__: function(text) {
+    this.text = text;
+  },
+
+  /* Turn into a UI node */
+  _render: function() {
+    return $makeNode("span", [this.text]);
+  }
+});
 
 /* A button that submits an Action when clicked.
  * Function arguments are passed variadically. */
@@ -772,8 +1009,13 @@ Item.defineType("Button", {
     this.text = text;
     this.funcname = funcname;
     this.delay = 0;
-    this.classes = null;
+    this.classes = "fade-in";
     this.args = Array.prototype.slice.call(arguments, 2);
+  },
+
+  /* Remove the item from the game */
+  __remove__: function() {
+    if (this.anchorItem) this.showWhenActive(null, null);
   },
 
   /* Render the item into a UI node */
@@ -788,31 +1030,45 @@ Item.defineType("Button", {
   use: function() {
     this._game.addTask.apply(this._game,
       [this.delay, this.funcname].concat(this.args));
+  },
+
+  /* Conditional showing/hiding */
+  showWhenActive: function(tab, item) {
+    var methName = "state.items." + this.name + "._updateVisibility";
+    if (this.anchorItem) {
+      var anchorObj = this._game.state.items[this.anchorItem];
+      if (anchorObj)
+        anchorObj.removeListenerFor(methName);
+    }
+    this.anchorItem = item;
+    if (item != null) {
+      var itemObj = this._game.state.items[item];
+      itemObj.addListener(methName, tab);
+      this._updateVisibility(tab, itemObj);
+    }
+  },
+
+  /* Conditional visibility backend */
+  _updateVisibility: function(tab, item) {
+    this._game.showItem(tab, this.name, (!! item.active));
   }
 });
 
 /* The lighter */
-Item.defineType("Lighter", {
+ActiveItem.defineType("Lighter", {
   /* Initialize instance */
   __init__: function(capacity, fill) {
     if (! fill) fill = 0;
     var v = this._game.addVariable(this.name + "/fill", fill);
-    v.maximum = capacity;
+    v.min = 0;
+    v.max = capacity;
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
-    this.burning = false;
-    this.onchange = null;
   },
 
   /* Deplete the lighter's fuel */
   _deplete: function(variable, delta) {
-    if (! this.burning) return 0;
-    var decr = delta * 0.1;
-    if (decr > variable.value) {
-      decr = variable.value;
-      this.setBurning(false);
-    }
-    return -decr;
+    return (this.active) ? delta * -0.1 : 0;
   },
 
   /* Render the item into a UI node */
@@ -822,7 +1078,7 @@ Item.defineType("Lighter", {
       ["button", "btn btn-small item-use", "..."],
       ["div", "item-bar", [["div", "item-bar-content"]]]
     ]);
-    $sel(".item-use", ret).addEventListener("click", this.use.bind(this));
+    $listen($sel(".item-use", ret), "click", this.use.bind(this));
     this._meter = $sel(".item-bar-content", ret);
     this._button = $sel(".item-use", ret);
     this._updateMeter();
@@ -844,7 +1100,8 @@ Item.defineType("Lighter", {
       this._meter = $sel(".item-bar-content", this.render());
     }
     var v = this._getVar();
-    var f = Math.round(v.value / v.maximum * 10000) / 100;
+    if (v.value == 0 && this.active) this.setActive(false);
+    var f = Math.round(v.value / v.max * 10000) / 100;
     var fill = f + "%";
     if (this._meter.style.width != fill)
       this._meter.style.width = fill;
@@ -854,28 +1111,21 @@ Item.defineType("Lighter", {
   _updateButton: function() {
     if (this._button == null)
       this._button = $sel(".item-use", this.render());
-    var text = (this.burning) ? "Extinguish" : "Ignite";
+    var text = (this.active) ? "Extinguish" : "Ignite";
     if (this._button.textContent != text)
       this._button.textContent = text;
   },
 
-  /* Use the item */
-  use: function() {
-    this.setBurning(! this.burning);
-  },
-
   /* Set the burning state */
-  setBurning: function(state) {
+  setActive: function(state) {
     var v = this._getVar();
     if (state && v.value < 1e-6) {
       this._game.showMessage("The lighter is burnt out.");
-      return;
-    } else if (state == this.burning) {
-      return;
+      return false;
+    } else if (state == this.active) {
+      return false;
     }
-    this.burning = state;
-    this._updateButton();
-    if (this.burning) {
+    if (state) {
       if (this._game.setFlag("lighter-space")) {
         this._game.showMessage("The flame looks funny... Oh, right.");
         this._game.showMessage(["i", null, "Lack of gravity."]);
@@ -884,31 +1134,167 @@ Item.defineType("Lighter", {
     } else {
       this._game.showMessage("It is dark again.");
     }
-    if (this.onchange) this.onchange.cb(this);
+    ActiveItem.prototype.setActive.call(this, state);
+    this._updateButton();
+    return true;
+  }
+});
+
+/* The crank
+ * The ship is designed with much forethought, and in particular includes a
+ * means of manual power input for bootstrapping the reactor should all other
+ * ones fail. */
+ActiveItem.defineType("Crank", {
+  /* Initialize instance */
+  __init__: function(speedcap, speedincr, speeddecr) {
+    var v = this._game.addVariable(this.name + "/speed", 0);
+    v.min = 0;
+    v.max = speedcap;
+    v.addHandler(this._makeAction("_getIncrement"));
+    v.addLateHandler(this._makeAction("_updateSpeed"));
+    this.rotation = 0;
+    this._speed = 0;
+    this._speedcap = speedcap;
+    this.speedincr = speedincr;
+    this.speeddecr = speeddecr;
+    this._turning = false;
+    this._nextFrame = null;
+    this._updated = null;
+    this._icon = null;
+    this._meter = null;
+  },
+
+  /* Render the item into a UI node */
+  _render: function() {
+    var ret = $makeNode("div", "item-card fade-in", [
+      ["span", "item-icon item-icon-interactive", {tabIndex: 0}, [
+        ["span", "item-icon-inner img-crank"]
+      ]],
+      ["div", "item-rows", [
+        ["b", "item-name", "Crank"],
+        ["hr"],
+        ["button", "btn btn-small item-use", "Turn"],
+        ["div", "item-bar", [["div", "item-bar-content"]]]
+      ]]
+    ]);
+    var self = this;
+    var icon = $sel(".item-icon", ret), button = $sel(".item-use", ret);
+    [icon, button].forEach(function(node) {
+      node.addEventListener("mousedown", self._turn.bind(self, true));
+      node.addEventListener("mouseup", self._turn.bind(self, false));
+      node.addEventListener("mouseout", self._turn.bind(self, false));
+      node.addEventListener("blur", function(evt) {
+        if (evt.relatedTarget != icon && evt.relatedTarget != button)
+          self._turn(false);
+      });
+    });
+    this._icon = $sel(".item-icon span", ret);
+    this._meter = $sel(".item-bar-content", ret);
+    this._icon.style.transform = "rotate(" + this.rotation * 360 + "deg)";
+    return ret;
+  },
+
+  /* Get the current increment for the variable */
+  _getIncrement: function(variable, delta) {
+    return (this._turning) ? this.speedincr * delta :
+      -this.speeddecr * delta;
+  },
+
+  /* Update the rotation speed */
+  _updateSpeed: function() {
+    var variable = this._game.state.variables[this.name + "/speed"];
+    this._speed = variable.value;
+    if (this._meter == null)
+      this._meter = $sel(".item-bar-content", this.render());
+    this._meter.style.width = (this._speed / variable.max * 100) + "%";
+  },
+
+  /* Start or stop turning the crank */
+  _turn: function(state) {
+    this._turning = state;
+    if (this._turning && ! this._nextFrame)
+      this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
+  },
+
+  /* Update the animation */
+  _updateAnim: function(now) {
+    if (this._updated == null) {
+      this._updated = now;
+      this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
+      return;
+    }
+    var delta = (now - this._updated) / 1000.0;
+    if (this._speed) {
+      this._updated = now;
+      if (this._icon == null)
+        this._icon = $sel(".item-icon span", this.render());
+      this.rotation = (this.rotation + this._speed * delta) % 1.0;
+      this._icon.style.transform = "rotate(" + this.rotation * 360 + "deg)";
+    } else {
+      this._updated = null;
+    }
+    this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
   }
 });
 
 /* *** Initialization *** */
 
 var Dasca = {
-  game: null
+  game: null,
+  storage: null
 };
 
 function init() {
-  var game = null;
-  $id("startgame").addEventListener("click", function() {
+  function startgame(restore) {
     if (game) game.unmount();
-    game = new Game();
+    game = new Game((restore ? null : ""), storage);
     Dasca.game = game;
     game.mount($id("mainscreen"));
-    game.start();
     showNode("mainscreen");
+  }
+  var game = null, storage = new StorageCell("dasca-save-v1");
+  Dasca.storage = storage;
+  $listen("exportsave", "click", function() {
+    var data = storage.loadRaw();
+    if (data) {
+      data = b64encw(json2ascii(data));
+    } else {
+      data = "";
+    }
+    $id("text-export").value = data;
   });
-  $id("credits-title").addEventListener("click", function() {
+  $listen("importsave", "click", function() {
+    storage.saveRaw(b64decw($id("text-export").value));
+  });
+  $listen("downloadsave", "click", function() {
+    var data = storage.loadRaw();
+    if (! data) {
+      alert("Nothing saved");
+      return;
+    }
+    var link = $id("file-download");
+    link.href = "data:text/base64," + encodeURI(b64encw(json2ascii(data)));
+    link.click();
+  });
+  $listen("uploadsave", "click", function() {
+    $id("file-upload").click();
+  });
+  $listen("file-upload", "change", function() {
+    var sel = $id("file-upload");
+    var file = sel.files[0];
+    if (! file) return;
+    var reader = new FileReader();
+    reader.onload = function(evt) {
+      storage.saveRaw(b64decw(reader.result));
+      alert("OK");
+    };
+    reader.readAsText(file);
+  });
+  $listen("credits-title", "click", function() {
     if (game) game.pause(true);
     showNode("creditscreen");
   });
-  $id("back-credits").addEventListener("click", function() {
+  $listen("back-credits", "click", function() {
     if (game && game.running) {
       game.pause(false);
       showNode("mainscreen");
@@ -916,7 +1302,18 @@ function init() {
       showNode("titlescreen");
     }
   });
+  // jQuery? Naaah...
+  Array.prototype.forEach.call($selAll("[data-switch]"), function(elem) {
+    $listen(elem, "click", function() {
+      showNode(elem.dataset.switch);
+    });
+  });
+  Array.prototype.forEach.call($selAll("[data-newgame]"), function(elem) {
+    $listen(elem, "click", function() {
+      startgame(elem.dataset.newgame == "load");
+    });
+  });
   showNode("titlescreen");
 }
 
-window.addEventListener("load", init);
+$listen(window, "load", init);

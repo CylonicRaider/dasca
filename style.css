@@ -28,15 +28,13 @@ body, #game {
 .layer {
   visibility: hidden;
   opacity: 0;
-  transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
-              visibility 100ms step-end;
+  transition: opacity 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
 }
 .layer.selected {
   visibility: visible;
   opacity: 1;
-  transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
-              visibility 100ms step-start;
   z-index: 1000;
+  animation: fade-in 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
 }
 
 .pane {
@@ -49,6 +47,9 @@ body, #game {
   justify-content: center;
   align-items: center;
   padding: 0 25vw;
+}
+.shade {
+  background: rgba(0, 0, 0, 0.75);
 }
 
 h1 {
@@ -64,17 +65,20 @@ h1 {
   height: 0.2em;
 }
 
-.btn {
+.btn, .area {
   border: 1px solid #808080;
   margin: 0.25em;
-  padding: 3px;
+  box-sizing: border-box;
   color: inherit;
   font: inherit;
-  cursor: pointer;
   background: none;
   outline: none;
-  text-decoration: none;
   outline-offset: -3px;
+}
+.btn {
+  padding: 3px;
+  cursor: pointer;
+  text-decoration: none;
 }
 .btn::-moz-focus-inner {
   margin: 0;
@@ -108,6 +112,29 @@ h1 {
 }
 .btn-link:visited {
   color: #c000c0;
+}
+.area {
+  width: 100%;
+  min-height: 4.5em;
+  resize: vertical;
+}
+.area-nowrap {
+  white-space: pre;
+}
+.area-small {
+  font-size: 0.5em;
+  line-height: 1;
+}
+
+.btnrow {
+  display: flex;
+  width: 100%;
+}
+.btnrow > .btn:first-child {
+  margin-left: 0;
+}
+.btnrow > .btn:last-child {
+  margin-right: 0;
 }
 
 #mainscreen, #game-content {
@@ -184,11 +211,41 @@ h1 {
 }
 
 .item-card {
+  margin-bottom: 0.5em;
+}
+.item-card, .item-rows {
   display: flex;
   flex-wrap: wrap;
-  margin-bottom: 0.25em;
+  align-content: space-between;
 }
-.item-card .item-name {
+.item-card .item-icon {
+  width: 2.4em;
+  height: 2.4em;
+  cursor: pointer;
+  outline-offset: -1px;
+  overflow: hidden;
+}
+.item-card .item-icon-inner {
+  display: block;
+  width: 2.4em;
+  height: 2.4em;
+}
+.item-card .item-icon:active, .item-card .item-icon:focus {
+  outline: 1px dotted #808080;
+}
+.item-card .item-icon:active {
+  outline-color: #c0c0c0;
+}
+
+.item-card .item-name, .item-card .item-rows {
+  flex-grow: 1;
+}
+.item-card hr {
+  width: 0.5em;
+  border: none;
+}
+.item-card .item-filler {
+  width: 100%;
   flex-grow: 1;
 }
 .item-card .item-bar {
@@ -201,30 +258,30 @@ h1 {
   height: 100%;
   background: #008000;
 }
+.item-card .item-bar-pm .item-bar-content {
+  margin-left: 50%;
+}
+.item-card .btn {
+  height: 1.2em;
+}
 
 .fade-in {
   animation: fade-in 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
-}
-.fade-in-fast {
-  animation: fade-in 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
 }
 
 .dim {
   opacity: 0.5;
 }
 
-.hidable {
-  visibility: visible;
-  opacity: 1;
-  transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
-              visibility 100ms step-start;
-}
-.hidable.hidden {
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 100ms cubic-bezier(0.5, 0.0, 1.0, 1.0),
-              visibility 100ms step-end;
-}
-:not(.hidable).hidden {
+.no-display {
   display: none;
+}
+
+.img-crank {
+  background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIj8+PHN\
+    2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xNiwtMTY\
+    gMzIsMzIiPjxjaXJjbGUgcj0iMTYiIGZpbGw9IiM2MDYwNjAiIG9wYWNpdHk9IjAuMiIvPjx\
+    jaXJjbGUgcj0iOCIgZmlsbD0iIzYwNjA2MCIvPjxsaW5lIHkyPSItMTIiIHN0cm9rZT0iIzg\
+    wODA4MCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PGNpcmNsZSBjeT0iLTEyIiByPSIyIiB\
+    maWxsPSIjYTBhMGEwIi8+PC9zdmc+");
 }
