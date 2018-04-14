@@ -4,259 +4,28 @@
 
 'use strict';
 
-/* *** Clock ***
- * An object allowing to sample "time" (as defined by an external source)
- * with a linear transform in place. */
-
-/* Construct a new clock
- * source is a function that, when called, returns the current time; scale
- * and offset modify source's output in a linear fashion: the reading of
- * source is multiplied by scale and offset is added to that to obtain the
- * current time. If scale is undefined or null, it defaults to 1; if offset
- * is null, it is computed such that the clock starts counting from zero. */
-function Clock(source, scale, offset) {
-  if (scale == null) scale = 1.0;
-  if (offset == null) offset = -source() * scale;
-  this.source = source;
-  this.scale = scale;
-  this.offset = offset;
-}
-
-Clock.prototype = {
-  /* Sample the current time */
-  now: function() {
-    return this.source() * this.scale + this.offset;
-  },
-
-  /* Construct a new clock from this one, applying the given transformation
-   * The new clock derives its time from the same (!) source as this one,
-   * but its scale and offset are modified to simulate a clock constructed
-   * like
-   *     new Clock(this, scale, offset);
-   */
-  derive: function(scale, offset) {
-    if (scale == null) scale = 1.0;
-    if (offset != null) offset = this.offset * scale + offset;
-    var ret = new Clock(this.source, this.scale * scale, offset);
-    if (this._realTime) ret._realTime = true;
-    return ret;
-  },
-
-  /* Change the scale of the clock, ensuring that readings continue to be
-   * continuous */
-  setScale: function(scale) {
-    var samp = this.source();
-    this.offset = (this.scale - scale) * samp + this.offset;
-    this.scale = scale;
-  },
-
-  /* Change the scale of the clock relatively to the current one */
-  changeScale: function(factor) {
-    this.setScale(this.scale * factor);
-  },
-
-  /* Jump to the given time */
-  setTime: function(time) {
-    this.offset = time - this.source() * this.scale;
-  },
-
-  /* Change the time reported by the clock by the given increment */
-  changeTime: function(delta) {
-    this.offset -= delta;
-  },
-
-  /* Serialization boilerplate */
-  constructor: Clock,
-
-  /* Seralize */
-  __save__: function() {
-    if (! this._realTime) throw new Error("Clock not serializable!");
-    return {scale: this.scale, time: this.now()};
-  },
-
-  /* Deserialize */
-  __restore__: function(data) {
-    return Clock.realTime(data.scale, data.time);
-  }
-};
-
-/* Construct a clock that returns (optionally scaled) real time
- * The clock counts from zero */
-Clock.realTime = function(scale, start) {
-  if (scale == null) scale = 1.0;
-  var offset = null;
-  if (start != null) offset = start - performance.now() / 1000.0 * scale;
-  var ret = new Clock(function() {
-    return performance.now() / 1000.0;
-  }, scale, offset);
-  ret._realTime = true;
-  return ret;
-};
-
 /* *** Scheduler ***
- * Schedules callbacks to happen at certain times as defined by a Clock
- * instance. */
+ *
+ * Runs callbacks at a defined rate. */
 
 /* Construct a new scheduler
- * requeue is a funtion that somehow ("magically") ensures the function
- * passed to it is asynchronously called again some short time later; tasks
- * is an ordered array of objects whose "time" property is used to determine
- * when they are to run; contTasks is an array of tasks to be run
- * continuously, i.e. at every call of run(), until they return a true value,
- * at which point they are removed; clock is a Clock instance determining the
- * time this instance works with. The "running" property is set to true; it
- * can be used to stop the Scheduler. To start it, ensure the "running"
- * property is true and call the run() method. */
-function Scheduler(requeue, tasks, contTasks, clock) {
-  if (tasks == null) tasks = [];
-  if (contTasks == null) contTasks = [];
-  if (clock == null) clock = Clock.realTime();
-  this.requeue = requeue;
-  this.tasks = tasks;
-  this.contTasks = contTasks;
-  this.clock = clock;
+ *
+ * fps is the rate at which callbacks should run. Scheduler attempts to run
+ * them in an evenly distributed manner; if that fails, callbacks are
+ * executed in batches such that fps remains valid on average. */
+function Scheduler(fps) {
+  this.fps = fps;
   this.running = true;
-  this._idle = true;
+  this.tasks = [];
+  this.contTasks = [];
+  this._timer = null;
+  this._lastRun = null;
 }
 
 Scheduler.prototype = {
-  /* Queue the next run of the scheduler, and perform any tasks whose time
-   * has come
-   * After obtaining a timestamp from the clock, all tasks whose time
-   * property is not less than the timestamp are removed from the queue and
-   * run using runTask(); after that, if the "running" property is true,
-   * requeue is called with a bound version of this.run as only argument to
-   * trigger another execution. */
-  run: function() {
-    /* Abort if not running */
-    if (! this.running) return;
-    /* Obtain current timestamp */
-    var now = this.clock.now();
-    /* For each task that is (over)due */
-    while (this.tasks[0] && this.tasks[0].time <= now) {
-      this.runTask(this.tasks.shift(), now);
-    }
-    /* Run the continuous tasks */
-    for (var i = 0; i < this.contTasks.length; i++) {
-      if (this.runTask(this.contTasks[i], now))
-        this.contTasks.splice(i--, 1);
-    }
-    /* Schedule next iteration */
-    if (this.tasks.length || this.contTasks.length) {
-      this.requeue(this.run.bind(this));
-    } else {
-      this._idle = true;
-    }
-  },
-
-  /* Run a singular task, providing the given timestamp
-   * The default implementation calls the task's "cb" (which is assumed to be
-   * a function) with the value of now and the Scheduler instance as
-   * arguments, and consumes exceptions by logging them to the console. */
-  runTask: function(task, now) {
-    try {
-      return task.cb(now, this);
-    } catch (e) {
-      console.error(e);
-    }
-  },
-
-  /* Schedule a task to be run
-   * If time is not null, it is inserted into task as the "time" property;
-   * after that, the task is inserted at an appropriate position. */
-  addTask: function(task, time) {
-    if (time != null) task.time = time;
-    time = task.time;
-    var i;
-    for (i = 0; i < this.tasks.length; i++) {
-      if (this.tasks[i].time > time) break;
-    }
-    this.tasks.splice(i, 0, task);
-    if (this.running && this._idle) {
-      this._idle = false;
-      this.requeue(this.run.bind(this));
-    }
-  },
-
-  /* Schedule a task to be run after delta units of time */
-  addTaskIn: function(task, delta) {
-    this.addTask(task, this.clock.now() + delta);
-  },
-
-  /* Remove a task again */
-  removeTask: function(task) {
-    var idx = this.tasks.indexOf(task);
-    if (idx != -1) this.tasks.splice(idx, 1);
-  },
-
-  /* Add a continuous task */
-  addContTask: function(task) {
-    this.contTasks.push(task);
-    if (this.running && this._idle) {
-      this._idle = false;
-      this.requeue(this.run.bind(this));
-    }
-  },
-
-  /* Remove a continuous task */
-  removeContTask: function(task) {
-    var idx = this.contTasks.indexOf(task);
-    if (idx != -1) this.contTasks.splice(idx, 1);
-  },
-
-  /* Cancel all tasks */
-  clear: function() {
-    this.tasks.splice(0, this.tasks.length);
-  },
-
-  /* OOP boilerplate */
-  constructor: Scheduler,
-
-  /* Prepare for serializing a Scheduler */
-  __save__: function() {
-    var ret = {type: this._type, tasks: this.tasks,
-               contTasks: this.contTasks, clock: this.clock,
-               running: this.running};
-    if (this._type == "strobe") {
-      ret.fps = this._fps;
-    } else if (this._type != "animated") {
-      throw new Error("Scheduler not serializable!");
-    }
-    return ret;
-  },
-
-  /* Deserialize a Scheduler */
-  __restore__: function(data) {
-    var ret;
-    if (data.type == "animated") {
-      ret = Scheduler.makeAnimated(data.clock);
-    } else if (data.type == "strobe") {
-      ret = Scheduler.makeStrobe(data.fps, data.clock);
-    }
-    ret.tasks = data.tasks;
-    ret.contTasks = data.contTasks;
-    ret.running = data.running;
-    return ret;
-  }
-};
-
-/* Create a Scheduler for animations */
-Scheduler.makeAnimated = function(clock) {
-  var ret = new Scheduler(requestAnimationFrame.bind(window), null, null,
-                          clock);
-  ret._type = "animated";
-  return ret;
-};
-
-/* Create a Scheduler that polls tasks at regular intervals */
-Scheduler.makeStrobe = function(fps, clock) {
-  var delay = 1000.0 / fps;
-  var ret = new Scheduler(function(cb) {
-    setTimeout(cb, delay);
-  }, null, null, clock);
-  ret._type = "strobe";
-  ret._fps = fps;
-  return ret;
+  /* Serialization stuff */
+  constructor: Scheduler
+  /* NYI */
 };
 
 /* *** Serialization ***
