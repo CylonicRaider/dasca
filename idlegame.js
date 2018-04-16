@@ -10,22 +10,96 @@
 
 /* Construct a new scheduler
  *
- * fps is the rate at which callbacks should run. Scheduler attempts to run
- * them in an evenly distributed manner; if that fails, callbacks are
- * executed in batches such that fps remains valid on average. */
+ * Callbacks are run in "iterations". Scheduler attempts to have the
+ * iterations run at an even rate of fps frames per second; if that fails,
+ * iterations are run in batches such that fps is preserved on average. */
 function Scheduler(fps) {
   this.fps = fps;
   this.running = true;
+  this.iteration = 0;
   this.tasks = [];
   this.contTasks = [];
   this._timer = null;
   this._lastRun = null;
+  this._onerror = null;
 }
 
 Scheduler.prototype = {
+  /* Schedule a task to be run
+   *
+   * task should have a cb property, which is invoked with this Scheduler
+   * instance as the only argument (and the task object as the context). time
+   * is the absolute iteration number the task is going to be run on; if not
+   * null, it is assigned to task as a property; if task has no non-null
+   * "time" property after that, it defaults to zero, so that the task will
+   * run on the next iteration.
+   *
+   * Returns the task parameter. */
+  addTask: function(task, time) {
+    if (time != null) task.time = time;
+    if (task.time == null) task.time = 0;
+    var i;
+    for (i = 0; i < this.tasks.length; i++) {
+      if (this.tasks[i].time > task.time) break;
+    }
+    this.tasks.splice(i, 0, task);
+    return task;
+  },
+
+  /* Schedule a task to be run after some iterations
+   *
+   * See addTask() for the semantics of task (in particular, its "time"
+   * property remains absolute). delay is the amount of iterations the task
+   * stays idle for before it is run; values no greater than zero cause the
+   * task to run on the next iteration.
+   *
+   * Returns the task parameter. */
+  addTaskIn: function(task, delay) {
+    return this.addTask(task, this.iteration + delay);
+  },
+
+  /* Schedule task to be run on every iteration henceforth
+   *
+   * task should have a cb property as detailed in addTask(). To un-schedule
+   * task, see removeContTask().
+   *
+   * Returns the task parameter. */
+  addContTask: function(task) {
+    this.contTasks.push(task);
+    return task;
+  },
+
+  /* Cancel the individual scheduling of task */
+  removeTask: function(task) {
+    var idx = this.tasks.indexOf(task);
+    if (idx != -1) this.tasks.splice(idx, 1);
+  },
+
+  /* Cancel the continuous scheduling of task */
+  removeContTask: function(task) {
+    var idx = this.contTasks.indexOf(task);
+    if (idx != -1) this.contTasks.splice(idx, 1);
+  },
+
+  /* Actually run the given task */
+  _runTask: function(task) {
+    try {
+      task.cb(this);
+    } catch (e) {
+      if (this._onerror) {
+        try {
+          this._onerror(e);
+        } catch (e2) {
+          console.error('Exception while running error handler:', e2);
+        }
+      } else {
+        console.error('Exception while running task:', e);
+      }
+    }
+  },
+
   /* Serialization stuff */
   constructor: Scheduler
-  /* NYI */
 };
 
 /* *** Serialization ***
