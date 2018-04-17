@@ -15,7 +15,7 @@
  * iterations are run in batches such that fps is preserved on average. */
 function Scheduler(fps) {
   this.fps = fps;
-  this.running = true;
+  this.running = false;
   this.iteration = 0;
   this.tasks = [];
   this.contTasks = [];
@@ -96,6 +96,50 @@ Scheduler.prototype = {
         console.error('Exception while running task:', e);
       }
     }
+  },
+
+  /* Perform a single iteration of the scheduler */
+  _runIteration: function() {
+    while (this.tasks.length) {
+      if (this.tasks[0].time > this.iteration) break;
+      var task = this.tasks.splice(0, 1)[0];
+      this._runTask(task);
+    }
+    var tasklist = this.contTasks.slice();
+    for (var i = 0; i < tasklist.length; i++) {
+      this._runTask(tasklist[i]);
+    }
+    this.iteration++;
+  },
+
+  /* Perform another run of the scheduler, if it is to be running */
+  _checkRun: function() {
+    if (this.running) this.run();
+  },
+
+  /* Force the scheduler to run (again) */
+  run: function() {
+    this.running = true;
+    if (this._lastRun != null) {
+      var now = Date.now();
+      while (this.running && this._lastRun <= now) {
+        this._runIteration();
+        this._lastRun += 1000.0 / this.fps;
+      }
+    } else {
+      this._runIteration();
+      this._lastRun = Date.now();
+    }
+    if (this.running) {
+      setTimeout(this._checkRun, 1000.0 / this.fps, this);
+    } else {
+      this._lastRun = null;
+    }
+  },
+
+  /* Stop the scheduler after the current iteration */
+  stop: function() {
+    this.running = false;
   },
 
   /* Serialization stuff */
