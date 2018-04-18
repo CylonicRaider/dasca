@@ -142,17 +142,17 @@ Scheduler.prototype = {
     this.running = false;
   },
 
-  /* Serialization stuff */
   constructor: Scheduler
 };
 
 /* *** Serialization ***
- * Serializes object trees (!) into JSON strings, allowing reified objects to
- * be of the correct type, and to hook their (de)serialization process.
- * Input containing enumerable function properties is rejected (since those
- * are silently swallowed by JSON); use hooks to meaningfully handle them.
- * When hooks are not used, properties whose names start with underscores (in
- * particular the special properties) are removed. */
+ *
+ * Serializes object trees (without self references) into JSON strings,
+ * allowing reified objects to be of the correct type, and to hook their
+ * (de)serialization process. Input containing enumerable function properties
+ * is rejected (since those are silently swallowed by JSON); use hooks or the
+ * Action class below to serialize references to functions. When hooks are
+ * not used, properties whose names start with underscores are removed. */
 
 /* Resolve a dotted name string to an object */
 function findObject(name, env) {
@@ -192,14 +192,14 @@ function serialize(obj) {
         ret[prop] = value[prop];
       }
     }
-    /* Add __type__ */
+    /* Add type for later retrieval */
     ret.__type__ = cons;
     /* Done */
     return ret;
   });
 }
 
-/* Deserialize a JSON string into an object structure */
+/* Deserialize a JSON string from serialize() into an object structure */
 function deserialize(obj, env) {
   if (env == null) env = window;
   return JSON.parse(obj, function(name, value) {
@@ -231,7 +231,7 @@ function deserialize(obj, env) {
   });
 }
 
-/* Turn a JSON string into an ASCII equivalent */
+/* Ensure a JSON string contains only ASCII characters */
 function json2ascii(s) {
   return s.replace(/[^ -~]/g, function(ch) {
     s = ch.charCodeAt(0).toString(16);
@@ -245,9 +245,11 @@ function json2ascii(s) {
 }
 
 /* Construct a new StorageCell
+ *
  * The object encapsulates the value associated with a particular
- * localStorage key, and additionally caches saved values in memory (in case
- * localStorage is not available). */
+ * localStorage key, caches saved values in memory (in case localStorage is
+ * not available), and allows transparently serializing/deserializing
+ * values. */
 function StorageCell(name) {
   this.name = name;
   this.rawValue = undefined;
@@ -282,20 +284,21 @@ StorageCell.prototype = {
     this.saveRaw(serialize(val));
   },
 
-  /* OOP... */
   constructor: StorageCell
 };
 
 /* *** Action ***
+ *
  * A serializable wrapper around a method call. Can be used as a callback for
  * Scheduler; for that reason, a property named "time" is serialized and
  * restored if present. */
 
 /* Construct a new Action
+ *
  * self is the name (!) of an object to be resolved relative to env; func is
  * the name of a function to be resolved relative to self; args is an array
  * of arguments. The function is called with the object resolved for self as
- * the this object and args as the positional arguments.
+ * the context and args as the positional arguments.
  * If args is omitted, an empty array is used; if env is omitted, the global
  * object (i.e. window) is used. */
 function Action(self, func, args, env) {
@@ -306,27 +309,26 @@ function Action(self, func, args, env) {
 }
 
 Action.prototype = {
-  /* Do what is said on the tin
-   * Resolve and run the function represented by this object as described
-   * along with the constructor, and return its return value.
-   * Arguments passed to run() are appended to the arguments stored in the
-   * object. */
+  /* Invoke this Action
+   *
+   * This function is present to provide a more meaningful name. */
   run: function() {
-    // Implementation moved to the more-used cb().
     return this.cb.apply(this, arguments);
   },
 
-  /* Callback
-   * Many objects invoking others expect the functionality to be located at
-   * this attributes; this method is hence identical to run(). */
+  /* Invoke this Action
+   *
+   * Resolve and run the function represented by this object as described
+   * along with the constructor, and return its return value.
+   * Arguments passed to this function are appended to the arguments stored
+   * in the object. */
   cb: function() {
     var self = findObject(this.self, this.env);
     var method = findObject(this.func, self);
     return method.apply(self,
-                        Array.prototype.concat.apply(this.args, arguments));
+      Array.prototype.concat.apply(this.args, arguments));
   },
 
-  /* OOP boilerplate */
   constructor: Action,
 
   /* Prepare for serialization */
@@ -343,9 +345,9 @@ Action.prototype = {
 };
 
 /* Construct a CachingAction
+ *
  * The class derives from Action, and only differs in caching the self object
- * and method (under the assumption that those will never change).
- */
+ * and method (under the assumption that those will never change). */
 function CachingAction(self, func, args, env) {
   Action.apply(this, arguments);
   this._self = null;
@@ -355,10 +357,11 @@ function CachingAction(self, func, args, env) {
 CachingAction.prototype = Object.create(Action.prototype);
 
 /* Run the stored function
+ *
  * Differently to Action.prototype.run, this function caches the object and
  * the method to invoke. Note that the cache may be invalidated unpredictably
  * (such as when the object is serialized). */
-CachingAction.prototype.run = function() {
+CachingAction.prototype.cb = function() {
   if (this._func == null) {
     this._self = findObject(this.self, this.env);
     this._func = findObject(this.func, this._self);
@@ -367,5 +370,4 @@ CachingAction.prototype.run = function() {
     Array.prototype.concat.apply(this.args, arguments));
 };
 
-/* OOP something */
 CachingAction.prototype.constructor = CachingAction;
