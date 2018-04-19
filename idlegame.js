@@ -371,3 +371,98 @@ CachingAction.prototype.cb = function() {
 };
 
 CachingAction.prototype.constructor = CachingAction;
+
+/* *** Variable ***
+ *
+ * An (optinally bounded) numerical value with a constant or variable rate of
+ * change.
+ *
+ * Variables are primarily managed via their "derivatives" (or discrete
+ * approximations of those); those are determined by summing up values
+ * returned by various "handlers". To perform actions that depend on the value
+ * of the Variable, "late handlers" are provided.
+ * NOTE that neither sort of handler may mutate the Variable's value directly;
+ *      changes are automatically aggregated by the implementation.
+ * NOTE additionally that late handlers do not have a consistent world view
+ *      among different Variable-s: some may have been updated while some may
+ *      not. "Normal" handlers see the Variable uniformly in the state
+ *      *before* the round of updates. */
+
+/* Construct a new Variable
+ *
+ * value is the initial value for the variable. */
+function Variable(value) {
+  this.value = value;
+  this._newValue = null;
+  this.min = null;
+  this.max = null;
+  this.handlers = [];
+  this.lateHandlers = [];
+}
+
+Variable.prototype = {
+  /* Add a new handler to this Variable
+   *
+   * hnd is an object which has a rate or a cb property. If the rate property
+   * is present, it is used as a (per-second) rate of change for this
+   * Variable; otherwise, the handler is assumed to have a cb property, which
+   * is invoked with this Variable and a Scheduler instance as parameters,
+   * and is expected to return a (per-second) rate of change. */
+  addHandler: function(hnd) {
+    this.handlers.push(hnd);
+  },
+
+  /* Remove the given handler */
+  removeHandler: function(hnd) {
+    var idx = this.handlers.indexOf(hnd);
+    if (idx != -1) this.handlers.splice(idx, -1);
+  },
+
+  /* Add a late handler
+   *
+   * hnd is an object with a cb property; the latter is invoked with the value
+   * of this Variable as a first parameter and this Variable instance as a
+   * second one. */
+  addLateHandler: function(hnd) {
+    this.lateHandlers.push(hnd);
+  },
+
+  /* Remove the given late handler */
+  removeLateHandler: function(hnd) {
+    var idx = this.lateHandlers.indexOf(hnd);
+    if (idx != -1) this.lateHandlers.splice(idx, -1);
+  },
+
+  /* Run all handlers for this variable and change its value accordingly
+   *
+   * scheduler is a Scheduler instance to derive timing parameters from.
+   * NOTE that all handlers see the value of the Variable *before* the update
+   *      and that the new value is not applied until the updateLate() method
+   *      is called. */
+  update: function(scheduler) {
+    var newValue = this.value;
+    for (var i = 0; i < this.handlers.length; i++) {
+      var hnd = this.handlers[i];
+      if (hnd.rate) {
+        newValue += hnd.rate / scheduler.fps;
+      } else {
+        newValue += hnd.cb(this, scheduler) / scheduler.fps;
+      }
+    }
+    if (this.min != null && newValue < this.min) newValue = this.min;
+    if (this.max != null && newValue > this.max) newValue = this.max;
+    this._newValue = newValue;
+  },
+
+  /* Run all late handlers
+   *
+   * update() must have been called before. */
+  updateLate: function() {
+    this.value = this._newValue;
+    for (var i = 0; i < this.lateHandlers.length; i++) {
+      this.lateHandlers[i].cb(this.value, this);
+    }
+  },
+
+  constructor: Variable
+};
