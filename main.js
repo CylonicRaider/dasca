@@ -143,6 +143,7 @@ function hideChildren(node) {
 /* *** Game mechanics *** */
 
 /* The main game object
+ *
  * state is a game state to restore (see below for details); storage is a
  * StorageCell instance used for state persistence (or absent for none).
  * If state is falsy, a new one is created; otherwise, state is deserialized.
@@ -334,8 +335,9 @@ Game.prototype = {
   pause: function(doPause) {
     if (doPause == null) doPause = (! this.paused);
     this.paused = doPause;
-    this.state.scheduler.clock.setScale((doPause) ? 0 : 1);
+    this.state.scheduler.running = (! doPause);
     this.ui._updatePause();
+    if (! doPause) this.state.scheduler.run();
   },
 
   /* Stop running the game */
@@ -347,14 +349,14 @@ Game.prototype = {
 
   /* Update the variables */
   _updateVars: function(now) {
-    var v = this.state.variables;
+    var v = this.state.variables, s = this.state.scheduler;
     for (var name in v) {
       if (! v.hasOwnProperty(name)) continue;
-      v[name].update(now);
+      v[name].update(s);
     }
     for (var name in v) {
       if (! v.hasOwnProperty(name)) continue;
-      v[name].runLateHandlers();
+      v[name].updateLate();
     }
   },
 
@@ -368,6 +370,16 @@ function GameStory(game) {
 }
 
 GameStory.prototype = {
+  /* Intro sequence */
+  INTRO: [
+    [null, 1],
+    [["i", null, "Darkness."], 2],
+    [["i", null, "Silence."], 2],
+    [["i", null, "Confinement."], 3],
+    [["i", null, "Amnesia."], 2],
+    [null, 0, "story._finishIntro"]
+  ],
+
   /* Description of surroundings */
   DESCRIPTION_START: [
     ["You are on the bridge of a spacecraft.", 4],
@@ -398,18 +410,11 @@ GameStory.prototype = {
   /* Start */
   init: function() {
     this.game.addTab("start", "Bridge", {hidden: true});
-    var intro = [[["i", null, "Darkness."], 1],
-                 [["i", null, "Silence."], 3],
-                 [["i", null, "Confinement."], 5],
-                 [["i", null, "Amnesia."], 8]];
-    intro.forEach(function(x) {
-      this.game.addTask(x[1], "showMessage", x[0]);
-    }, this);
-    this.game.addTask(10, "story.showStart");
+    this._showStoryFragment(this.INTRO);
   },
 
   /* Show the first tab */
-  showStart: function() {
+  _finishIntro: function() {
     this.game.addItem("Button", "show-lighter", "Check pockets",
                       "story.showLighter");
     this.game.showItem("start", "show-lighter");
@@ -470,7 +475,7 @@ GameStory.prototype = {
 
   /* Finish looking around the engine room */
   _finishLookAroundEngines: function() {
-    this.game.addItem("Crank", "crank", 3, 1, 0.3);
+    this.game.addItem("Crank", "crank", 3, 5, 2);
     this.game.showItem("engines", "crank");
     this.game.addItem("Button", "start-engines", "Start engines",
                       "story.tryStartEngines");
@@ -499,9 +504,10 @@ function StoryFragment(game, parts, delayIfNot) {
 
 StoryFragment.prototype = {
   /* Check whether a new story fragment should be displayed
-   * And do so if necessary. Return true when nothing further has to be
+   *
+   * ...And do so if necessary. Return true when nothing further has to be
    * done. */
-  cb: function(now) {
+  cb: function(now, scheduler) {
     if (this.nextTime != null && now < this.nextTime) return;
     if (this.nextIndex >= this.parts.length) return true;
     if (this.delayIfNot && ! findObject(this.delayIfNot, this._game)) {
@@ -527,13 +533,14 @@ StoryFragment.prototype = {
 };
 
 /* The (serializable) state of a game
+ *
  * The constructor creates a new state; for restoring a saved one, use the
  * deserialization function (in a suitable environment, which is created by
  * the constructor of Game). */
 function GameState(game) {
   this._game = game;
   // Scheduler.
-  this.scheduler = Scheduler.makeStrobe(60);
+  this.scheduler = new Scheduler(10);
   // {string -> bool}. Can be used to show one-off messages.
   this.flags = {};
   // [string]. Stores log messages.
@@ -778,6 +785,7 @@ GameUI.prototype = {
 };
 
 /* An Item encapsulates a single object the player can interact with
+ *
  * Item-s must be serializable; hence, non-serializable properties must be
  * prefixed with underscores.
  * Arguments after game and name are passed to the __init__ method (if any)
@@ -822,9 +830,9 @@ Item.prototype = {
 };
 
 /* An item that can be activated and deactivated
+ *
  * The use() method is specified to toggle the activity state (subtypes may
- * override this); changing the activity triggers listeners.
- */
+ * override this); changing the activity triggers listeners. */
 function ActiveItem(game, name) {
   this.active = false;
   this.listeners = [];
@@ -850,6 +858,7 @@ ActiveItem.prototype.setActive = function(state) {
 };
 
 /* Convenience function for adding an Action as a change listener
+ *
  * The invoked method receives -- aside from fixed arguments that are given
  * to this method variadically -- one single argument, namely this item.
  * If the return value of the listener method is true, the listener is
@@ -877,6 +886,7 @@ ActiveItem.prototype.removeListenerFor = function(method) {
 ActiveItem.prototype.constructor = ActiveItem;
 
 /* Define an Item subtype
+ *
  * A constructor with the given name is created; (own) properties are copied
  * from props into the prototype. The constructor and __sername__ properties
  * are set automatically. */
@@ -924,6 +934,7 @@ Item.defineType("Label", {
 });
 
 /* A button that submits an Action when clicked.
+ *
  * Function arguments are passed variadically. */
 Item.defineType("Button", {
   /* Initialize an instance. */
@@ -978,6 +989,9 @@ Item.defineType("Button", {
 
 /* The lighter */
 ActiveItem.defineType("Lighter", {
+  /* The rate at which the lighter consumes fuel */
+  CONSUMPTION_PER_SECOND: 0.5,
+
   /* Initialize instance */
   __init__: function(capacity, fill) {
     if (! fill) fill = 0;
@@ -989,8 +1003,8 @@ ActiveItem.defineType("Lighter", {
   },
 
   /* Deplete the lighter's fuel */
-  _deplete: function(variable, delta) {
-    return (this.active) ? delta * -0.1 : 0;
+  _deplete: function(variable, sched) {
+    return (this.active) ? -this.CONSUMPTION_PER_SECOND / sched.fps : 0;
   },
 
   /* Render the item into a UI node */
@@ -1063,6 +1077,7 @@ ActiveItem.defineType("Lighter", {
 });
 
 /* The crank
+ *
  * The ship is designed with much forethought, and in particular includes a
  * means of manual power input for bootstrapping the reactor should all other
  * ones fail. */
@@ -1117,9 +1132,9 @@ ActiveItem.defineType("Crank", {
   },
 
   /* Get the current increment for the variable */
-  _getIncrement: function(variable, delta) {
-    return (this._turning) ? this.speedincr * delta :
-      -this.speeddecr * delta;
+  _getIncrement: function(variable, sched) {
+    return (this._turning) ? this.speedincr / sched.fps :
+      -this.speeddecr / sched.fps;
   },
 
   /* Update the rotation speed */

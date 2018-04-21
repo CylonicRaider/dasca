@@ -12,27 +12,33 @@
  *
  * Callbacks are run in "iterations". Scheduler attempts to have the
  * iterations run at an even rate of fps frames per second; if that fails,
- * iterations are run in batches such that fps is preserved on average. */
+ * iterations are run in batches such that fps is preserved on average.
+ * The Scheduler has a notion of "time" which starts at zero when the
+ * Scheduler is created and is increased by a fixed increment after each
+ * iteration such that it follows wall clock time (on average); tasks are
+ * scheduled for concrete values of this time. */
 function Scheduler(fps) {
   this.fps = fps;
   this.running = false;
-  this.iteration = 0;
+  this.time = 0;
   this.tasks = [];
   this.contTasks = [];
   this._timer = null;
   this._lastRun = null;
   this._onerror = null;
+  this._started = null;
 }
 
 Scheduler.prototype = {
   /* Schedule a task to be run
    *
-   * task should have a cb property, which is invoked with this Scheduler
-   * instance as the only argument (and the task object as the context). time
-   * is the absolute iteration number the task is going to be run on; if not
-   * null, it is assigned to task as a property; if task has no non-null
-   * "time" property after that, it defaults to zero, so that the task will
-   * run on the next iteration.
+   * task should have a cb property, which is invoked with this Scheduler's
+   * current time as the first argument and this Scheduler instance as the
+   * second argument (and the task object as the context). time is the
+   * absolute time the task is going to be run at; if not null, it is
+   * assigned to task as a property; if task has no non-null "time" property
+   * after that, it defaults to zero, so that the task will run on the next
+   * iteration.
    *
    * Returns the task parameter. */
   addTask: function(task, time) {
@@ -49,13 +55,14 @@ Scheduler.prototype = {
   /* Schedule a task to be run after some iterations
    *
    * See addTask() for the semantics of task (in particular, its "time"
-   * property remains absolute). delay is the amount of iterations the task
-   * stays idle for before it is run; values no greater than zero cause the
-   * task to run on the next iteration.
+   * property remains absolute); additionally to them, if the callback returns
+   * a truthy value, the task is removed. delay is the time the task stays idle
+   * for before it is run; values no greater than zero cause the  task to run
+   * on the next iteration.
    *
    * Returns the task parameter. */
   addTaskIn: function(task, delay) {
-    return this.addTask(task, this.iteration + delay);
+    return this.addTask(task, this.time + delay);
   },
 
   /* Schedule task to be run on every iteration henceforth
@@ -84,7 +91,7 @@ Scheduler.prototype = {
   /* Actually run the given task */
   _runTask: function(task) {
     try {
-      task.cb(this);
+      return task.cb(this.time, this);
     } catch (e) {
       if (this._onerror) {
         try {
@@ -101,20 +108,26 @@ Scheduler.prototype = {
   /* Perform a single iteration of the scheduler */
   _runIteration: function() {
     while (this.tasks.length) {
-      if (this.tasks[0].time > this.iteration) break;
+      if (this.tasks[0].time > this.time) break;
       var task = this.tasks.splice(0, 1)[0];
       this._runTask(task);
     }
     var tasklist = this.contTasks.slice();
     for (var i = 0; i < tasklist.length; i++) {
-      this._runTask(tasklist[i]);
+      if (this._runTask(tasklist[i])) {
+        this.removeContTask(tasklist[i]);
+      }
     }
-    this.iteration++;
+    this.time += 1.0 / this.fps;
   },
 
   /* Perform another run of the scheduler, if it is to be running */
   _checkRun: function() {
-    if (this.running) this.run();
+    if (this.running) {
+      this.run();
+    } else {
+      this._lastRun = null;
+    }
   },
 
   /* Force the scheduler to run (again) */
@@ -131,7 +144,7 @@ Scheduler.prototype = {
       this._lastRun = Date.now();
     }
     if (this.running) {
-      setTimeout(this._checkRun, 1000.0 / this.fps, this);
+      setTimeout(this._checkRun.bind(this), 1000.0 / this.fps, this);
     } else {
       this._lastRun = null;
     }
