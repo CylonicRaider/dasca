@@ -394,6 +394,9 @@ CachingAction.prototype.constructor = CachingAction;
  * approximations of those); those are determined by summing up values
  * returned by various "handlers". To perform actions that depend on the value
  * of the Variable, "late handlers" are provided.
+ * The "mod" attribute, if not null, specifies a base to modulo-reduce the
+ * Variable against after updates; "min" and "max" specify upper and lower
+ * bounds (which are applied after modulo reduction).
  * NOTE that neither sort of handler may mutate the Variable's value directly;
  *      changes are automatically aggregated by the implementation.
  * NOTE additionally that late handlers do not have a consistent world view
@@ -407,6 +410,7 @@ CachingAction.prototype.constructor = CachingAction;
 function Variable(value) {
   this.value = value;
   this._newValue = null;
+  this.mod = null;
   this.min = null;
   this.max = null;
   this.handlers = [];
@@ -462,6 +466,7 @@ Variable.prototype = {
         newValue += hnd.cb(this, scheduler) / scheduler.fps;
       }
     }
+    if (this.mod != null) newValue %= this.mod;
     if (this.min != null && newValue < this.min) newValue = this.min;
     if (this.max != null && newValue > this.max) newValue = this.max;
     this._newValue = newValue;
