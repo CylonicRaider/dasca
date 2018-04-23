@@ -2,7 +2,7 @@
 /* Dasca, an idle game by @CylonicRaider (github.com/CylonicRaider/dasca)
  * Abstract engine for JS-based idle games */
 
-'use strict';
+"use strict";
 
 /* *** Scheduler ***
  *
@@ -97,10 +97,10 @@ Scheduler.prototype = {
         try {
           this._onerror(e);
         } catch (e2) {
-          console.error('Exception while running error handler:', e2);
+          console.error("Exception while running error handler:", e2);
         }
       } else {
-        console.error('Exception while running task:', e);
+        console.error("Exception while running task:", e);
       }
     }
   },
