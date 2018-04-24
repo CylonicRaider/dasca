@@ -418,6 +418,15 @@ function Variable(value) {
 }
 
 Variable.prototype = {
+  /* Retrieve the value of this Variable
+   *
+   * This can be used in conjunction with an Action to implement a handler for
+   * another Variable that references this one. (Note that storing the variable
+   * itself might lead to duplication when it is deserialized.) */
+  getValue: function() {
+    return this.value;
+  },
+
   /* Add a new handler to this Variable
    *
    * hnd is an object which has a rate or a cb property. If the rate property
