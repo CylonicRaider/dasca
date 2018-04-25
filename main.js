@@ -1032,9 +1032,7 @@ ActiveItem.defineType("Lighter", {
   /* Update the fill meter */
   _updateMeter: function() {
     /* Update fill meter */
-    if (this._meter == null) {
-      this._meter = $sel(".item-bar-content", this.render());
-    }
+    if (this._meter == null) this.render();
     var v = this._getVar();
     if (v.value == 0 && this.active) this.setActive(false);
     var f = Math.round(v.value / v.max * 10000) / 100;
@@ -1045,8 +1043,7 @@ ActiveItem.defineType("Lighter", {
 
   /* Update the action button */
   _updateButton: function() {
-    if (this._button == null)
-      this._button = $sel(".item-use", this.render());
+    if (this._button == null) this.render();
     var text = (this.active) ? "Extinguish" : "Ignite";
     if (this._button.textContent != text)
       this._button.textContent = text;
@@ -1084,19 +1081,21 @@ ActiveItem.defineType("Lighter", {
 ActiveItem.defineType("Crank", {
   /* Initialize instance */
   __init__: function(speedcap, speedincr, speeddecr) {
-    var v = this._game.addVariable(this.name + "/speed", 0);
-    v.min = 0;
-    v.max = speedcap;
-    v.addHandler(this._makeAction("_getIncrement"));
-    v.addLateHandler(this._makeAction("_updateSpeed"));
-    this.rotation = 0;
-    this._speed = 0;
+    var vs = this._game.addVariable(this.name + "/speed", 0);
+    vs.min = 0;
+    vs.max = speedcap;
+    vs.addHandler(this._makeAction("_getIncrement"));
+    vs.addLateHandler(this._makeAction("_updateSpeed"));
+    var vr = this._game.addVariable(this.name + "/rotation", 0);
+    vr.mod = 1;
+    vr.addHandler(this._game.createTask("state.variables." + this.name +
+      "/speed.getValue"));
+    vr.addLateHandler(this._makeAction("_updateRotation"));
+    // speedcap is stored in the variable.
     this._speedcap = speedcap;
     this.speedincr = speedincr;
     this.speeddecr = speeddecr;
     this._turning = false;
-    this._nextFrame = null;
-    this._updated = null;
     this._icon = null;
     this._meter = null;
   },
@@ -1127,7 +1126,8 @@ ActiveItem.defineType("Crank", {
     });
     this._icon = $sel(".item-icon span", ret);
     this._meter = $sel(".item-bar-content", ret);
-    this._icon.style.transform = "rotate(" + this.rotation * 360 + "deg)";
+    this._updateSpeed();
+    this._updateRotation();
     return ret;
   },
 
@@ -1140,37 +1140,20 @@ ActiveItem.defineType("Crank", {
   /* Update the rotation speed */
   _updateSpeed: function() {
     var variable = this._game.state.variables[this.name + "/speed"];
-    this._speed = variable.value;
-    if (this._meter == null)
-      this._meter = $sel(".item-bar-content", this.render());
-    this._meter.style.width = (this._speed / variable.max * 100) + "%";
+    if (this._meter == null) this.render();
+    this._meter.style.width = (variable.value / variable.max * 100) + "%";
+  },
+
+  /* Update the display angle */
+  _updateRotation: function(now) {
+    var variable = this._game.state.variables[this.name + "/rotation"];
+    if (this._icon == null) this.render();
+    this._icon.style.transform = "rotate(" + (variable.value * 360) + "deg)";
   },
 
   /* Start or stop turning the crank */
   _turn: function(state) {
     this._turning = state;
-    if (this._turning && ! this._nextFrame)
-      this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
-  },
-
-  /* Update the animation */
-  _updateAnim: function(now) {
-    if (this._updated == null) {
-      this._updated = now;
-      this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
-      return;
-    }
-    var delta = (now - this._updated) / 1000.0;
-    if (this._speed) {
-      this._updated = now;
-      if (this._icon == null)
-        this._icon = $sel(".item-icon span", this.render());
-      this.rotation = (this.rotation + this._speed * delta) % 1.0;
-      this._icon.style.transform = "rotate(" + this.rotation * 360 + "deg)";
-    } else {
-      this._updated = null;
-    }
-    this._nextFrame = requestAnimationFrame(this._updateAnim.bind(this));
   }
 });
 
