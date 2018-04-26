@@ -475,7 +475,7 @@ GameStory.prototype = {
 
   /* Finish looking around the engine room */
   _finishLookAroundEngines: function() {
-    this.game.addItem("Crank", "crank", 3, 5, 2);
+    this.game.addItem("Crank", "crank", 1, 2, 1);
     this.game.showItem("engines", "crank");
     this.game.addItem("Button", "start-engines", "Start engines",
                       "story.tryStartEngines");
@@ -1087,7 +1087,6 @@ ActiveItem.defineType("Crank", {
     vs.addHandler(this._makeAction("_getIncrement"));
     vs.addLateHandler(this._makeAction("_updateSpeed"));
     var vr = this._game.addVariable(this.name + "/rotation", 0);
-    vr.mod = 1;
     vr.addHandler(this._game.createTask("state.variables." + this.name +
       "/speed.getValue"));
     vr.addLateHandler(this._makeAction("_updateRotation"));
@@ -1126,6 +1125,10 @@ ActiveItem.defineType("Crank", {
     });
     this._icon = $sel(".item-icon span", ret);
     this._meter = $sel(".item-bar-content", ret);
+    /* Do not modulo-reduce while running to avoid problems with CSS
+     * transitions */
+    var rotation = this._game.state.variables[this.name + "/rotation"];
+    rotation.value %= 1;
     this._updateSpeed();
     this._updateRotation();
     return ret;
