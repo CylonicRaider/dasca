@@ -128,6 +128,7 @@ function showNode(node) {
 }
 
 /* Hide all selectable children of node
+ *
  * Approximate opposite of showNode. */
 function hideChildren(node) {
   if (! node) return;
@@ -214,6 +215,7 @@ Game.prototype = {
   },
 
   /* Create a task for addTask
+   *
    * Arguments are passed as an array. */
   createTaskEx: function(method, args) {
     var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
@@ -221,6 +223,7 @@ Game.prototype = {
   },
 
   /* Create a task for addTask
+   *
    * Arguments are passed variadically. */
   createTask: function(method) {
     return this.createTaskEx(method,
@@ -234,6 +237,7 @@ Game.prototype = {
   },
 
   /* Convenience wrapper for addTaskEx()
+   *
    * Arguments are passed variadically. */
   addTask: function(delay, method) {
     var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
@@ -248,6 +252,7 @@ Game.prototype = {
   },
 
   /* Schedule a function to be run repeatedly
+   *
    * Arguments are passed variadically. */
   addContTask: function(method) {
     var m = ("game." + method).match(/^(.+)\.([^.]+)$/);
@@ -300,6 +305,7 @@ Game.prototype = {
   },
 
   /* Show an item in a given UI tab, or hide it from there
+   *
    * Items can be in multiple tabs; their nodes are transparently reparented
    * on tab switches. */
   showItem: function(tab, name, show) {
@@ -360,7 +366,6 @@ Game.prototype = {
     }
   },
 
-  /* OOP */
   constructor: Game
 };
 
@@ -484,12 +489,12 @@ GameStory.prototype = {
   },
 
   /* Attempt starting the engines
+   *
    * Will fail if there is not enough energy. */
   tryStartEngines: function() {
     this.game.showMessage("Nothing happens.");
   },
 
-  /* OOP */
   constructor: GameStory
 };
 
@@ -523,7 +528,6 @@ StoryFragment.prototype = {
     }
   },
 
-  /* OOP details */
   constructor: StoryFragment,
 
   /* Deserialization */
@@ -563,7 +567,6 @@ function GameState(game) {
 }
 
 GameState.prototype = {
-  /* OOP */
   constructor: GameState,
 
   /* Deserialization */
@@ -649,6 +652,7 @@ GameUI.prototype = {
   },
 
   /* Embed the game's UI into the given DOM node
+   *
    * If not already done, the UI is constructed. */
   mount: function(parent) {
     this.parent = parent;
@@ -780,7 +784,6 @@ GameUI.prototype = {
     }
   },
 
-  /* Consistency */
   constructor: GameUI
 };
 
@@ -801,8 +804,7 @@ function Item(game, name) {
 }
 
 Item.prototype = {
-  /* Return the DOM node representing the UI of the item
-   * null if none. */
+  /* Return the DOM node representing the UI of the item or null if none */
   render: function() {
     if (this._node === undefined && this._render)
       this._node = this._render();
@@ -820,7 +822,6 @@ Item.prototype = {
       Array.prototype.slice.call(arguments, 1));
   },
 
-  /* OOP and/or serialization */
   constructor: Item,
 
   /* Deserialize an item */
@@ -847,6 +848,7 @@ ActiveItem.prototype.use = function() {
 };
 
 /* Set the activity flag
+ *
  * Returns whether the change has been successful. */
 ActiveItem.prototype.setActive = function(state) {
   if (state == this.active) return false;
@@ -868,6 +870,7 @@ ActiveItem.prototype.addListener = function(method) {
 };
 
 /* Remove a listener for the named method
+ *
  * Since the identities of Action objects are not preserved, this method is
  * named differently and performs fuzzy matching on the subject and method
  * name. */
@@ -882,7 +885,6 @@ ActiveItem.prototype.removeListenerFor = function(method) {
   }
 };
 
-/* OOP stuff */
 ActiveItem.prototype.constructor = ActiveItem;
 
 /* Define an Item subtype
@@ -894,6 +896,7 @@ Item.defineType = function(name, props) {
   /* Allow subclasses of Item to use this */
   var base = this;
   /* Create constructor function
+   *
    * There seems not to be any method actually supported by reasonably recent
    * browsers to do that but manual construction. */
   var func = eval(
@@ -907,6 +910,7 @@ Item.defineType = function(name, props) {
       func.prototype[k] = props[k];
   }
   /* Add special properties
+   *
    * All concrete item types (including those of subclasses) are intentionally
    * stored in Item. */
   func.prototype.constructor = func;
