@@ -23,6 +23,19 @@ function $listen(elem, event, callback) {
   elem.addEventListener(event, callback);
 }
 
+function $query(str) {
+  str = str.replace(/^[#?]/, "");
+  var ret = {}, entries = str.split("&");
+  for (var i = 0; i < entries.length; i++) {
+    var m = /^([^=]*)(?:=(.*))?$/.exec(entries[i]);
+    var name = m[1], value = m[2] || null;
+    ret[decodeURIComponent(name)] =
+      (value) ? decodeURIComponent(value) : value;
+  }
+  return ret;
+}
+var QUERY = $query(location.search);
+
 /* Create a DOM element */
 function $makeNode(tag, className, attrs, children) {
   /* Allow omitting parameters */
@@ -513,7 +526,8 @@ StoryFragment.prototype = {
    * ...And do so if necessary. Return true when nothing further has to be
    * done. */
   cb: function(now, scheduler) {
-    if (this.nextTime != null && now < this.nextTime) return;
+    // Debugging hook.
+    if (this.nextTime != null && now < this.nextTime && ! QUERY.fast) return;
     if (this.nextIndex >= this.parts.length) return true;
     if (this.delayIfNot && ! findObject(this.delayIfNot, this._game)) {
       this.nextTime = now + 1;
