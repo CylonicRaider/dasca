@@ -433,6 +433,7 @@ GameStory.prototype = {
 
   /* Show the first tab */
   _finishIntro: function() {
+    this.game.ui.showControls();
     this.game.addItem("Button", "show-lighter", "Check pockets",
                       "story.showLighter");
     this.game.showItem("start", "show-lighter");
@@ -618,7 +619,7 @@ GameUI.prototype = {
             ["h3", null, "Paused"]
           ]]
         ]],
-        ["div", "row row-small inset", {id: "bottombar"}, [
+        ["div", "row row-small inset hidden", {id: "bottombar"}, [
           ["button", "btn btn-small dim", {id: "credits-game"}, "Credits"],
           ["div", "col col-all"],
           ["button", "btn btn-small", {id: "pause-game"}, "Pause"],
@@ -653,6 +654,9 @@ GameUI.prototype = {
         this._updateItems(curTab);
         this._showTab(curTab, this.game.state.tabs[curTab].hidden);
       }
+      if (state.flags.controlsVisible) {
+        $idx("bottombar", this.root).classList.remove("hidden");
+      }
       this._updatePause();
     }
     return this.root;
@@ -682,6 +686,13 @@ GameUI.prototype = {
     this.parent.removeChild(this.root);
     this.parent = null;
     return oldParent;
+  },
+
+  /* Reveal the game controls */
+  showControls: function() {
+    var bar = $idx("bottombar", this.root);
+    this.game.state.flags.controlsVisible = true;
+    bar.classList.remove("hidden");
   },
 
   /* Message showing backend */

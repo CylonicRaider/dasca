@@ -201,6 +201,14 @@ h1 {
   margin-top: 0;
 }
 
+#bottombar {
+  transition: opacity 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
+}
+#bottombar.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
