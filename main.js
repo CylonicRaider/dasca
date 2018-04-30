@@ -273,13 +273,6 @@ Game.prototype = {
     return this.addContTaskEx(m[1], m[2], args);
   },
 
-  /* Add a new variable with the given initial value */
-  addVariable: function(name, value) {
-    var ret = new Variable(value);
-    this.state.variables[name] = ret;
-    return ret;
-  },
-
   /* Show a log message */
   showMessage: function(msg) {
     this.state.messages.push(msg);
@@ -824,6 +817,7 @@ GameUI.prototype = {
 function Item(game, name) {
   this._game = game;
   this.name = name;
+  this._vars = {};
   if (this.__init__)
     this.__init__.apply(this, Array.prototype.slice.call(arguments, 2));
 }
@@ -847,11 +841,28 @@ Item.prototype = {
       Array.prototype.slice.call(arguments, 1));
   },
 
+  /* Create a Variable for this item */
+  _makeVariable: function(name, initialValue) {
+    var ret = new Variable(initialValue);
+    this._game.state.variables[this.name + "/" + name] = ret;
+    this._vars[name] = ret;
+    return ret;
+  },
+
+  /* Retrieve a Variable on this item */
+  _getVariable: function(name) {
+    if (! (name in this._vars)) {
+      this._vars[name] = this._game.state.variables[this.name + "/" + name];
+    }
+    return this._vars[name];
+  },
+
   constructor: Item,
 
   /* Deserialize an item */
   __reinit__: function(env) {
     this._game = env.game;
+    this._vars = {};
   }
 };
 
@@ -1024,7 +1035,7 @@ ActiveItem.defineType("Lighter", {
   /* Initialize instance */
   __init__: function(capacity, fill) {
     if (! fill) fill = 0;
-    var v = this._game.addVariable(this.name + "/fill", fill);
+    var v = this._makeVariable("fill", fill);
     v.min = 0;
     v.max = capacity;
     v.addHandler(this._makeAction("_deplete"));
@@ -1051,18 +1062,11 @@ ActiveItem.defineType("Lighter", {
     return ret;
   },
 
-  /* Obtain the variable associated to this lighter */
-  _getVar: function() {
-    if (this._var == null)
-      this._var = this._game.state.variables[this.name + "/fill"];
-    return this._var;
-  },
-
   /* Update the fill meter */
   _updateMeter: function() {
     /* Update fill meter */
     if (this._meter == null) this.render();
-    var v = this._getVar();
+    var v = this._getVariable("fill");
     if (v.value == 0 && this.active) this.setActive(false);
     var f = Math.round(v.value / v.max * 10000) / 100;
     var fill = f + "%";
@@ -1080,7 +1084,7 @@ ActiveItem.defineType("Lighter", {
 
   /* Set the burning state */
   setActive: function(state) {
-    var v = this._getVar();
+    var v = this._getVariable("fill");
     if (state && v.value < 1e-6) {
       this._game.showMessage("The lighter is burnt out.");
       return false;
@@ -1110,12 +1114,12 @@ ActiveItem.defineType("Lighter", {
 ActiveItem.defineType("Crank", {
   /* Initialize instance */
   __init__: function(speedcap, speedincr, speeddecr) {
-    var vs = this._game.addVariable(this.name + "/speed", 0);
+    var vs = this._makeVariable("speed", 0);
     vs.min = 0;
     vs.max = speedcap;
     vs.addHandler(this._makeAction("_getIncrement"));
     vs.addLateHandler(this._makeAction("_updateSpeed"));
-    var vr = this._game.addVariable(this.name + "/rotation", 0);
+    var vr = this._makeVariable("rotation", 0);
     vr.addHandler(this._game.createTask("state.variables." + this.name +
       "/speed.getValue"));
     vr.addLateHandler(this._makeAction("_updateRotation"));
@@ -1156,8 +1160,7 @@ ActiveItem.defineType("Crank", {
     this._meter = $sel(".item-bar-content", ret);
     /* Do not modulo-reduce while running to avoid problems with CSS
      * transitions */
-    var rotation = this._game.state.variables[this.name + "/rotation"];
-    rotation.value %= 1;
+    this._getVariable("rotation").value %= 1;
     this._updateSpeed();
     this._updateRotation();
     return ret;
@@ -1171,14 +1174,14 @@ ActiveItem.defineType("Crank", {
 
   /* Update the rotation speed */
   _updateSpeed: function() {
-    var variable = this._game.state.variables[this.name + "/speed"];
+    var variable = this._getVariable("speed");
     if (this._meter == null) this.render();
     this._meter.style.width = (variable.value / variable.max * 100) + "%";
   },
 
   /* Update the display angle */
   _updateRotation: function(now) {
-    var variable = this._game.state.variables[this.name + "/rotation"];
+    var variable = this._getVariable("rotation");
     if (this._icon == null) this.render();
     this._icon.style.transform = "rotate(" + (variable.value * 360) + "deg)";
   },
