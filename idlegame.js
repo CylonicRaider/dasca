@@ -406,13 +406,14 @@ CachingAction.prototype.constructor = CachingAction;
 
 /* Construct a new Variable
  *
- * value is the initial value for the variable. */
-function Variable(value) {
+ * value is the initial value for the variable; min and max (if given) define
+ * the range of values this Variable can assume. */
+function Variable(value, min, max) {
   this.value = value;
+  this.min = min;
+  this.max = max;
   this._newValue = null;
   this.mod = null;
-  this.min = null;
-  this.max = null;
   this.handlers = [];
   this.lateHandlers = [];
 }

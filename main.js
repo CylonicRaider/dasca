@@ -842,8 +842,8 @@ Item.prototype = {
   },
 
   /* Create a Variable for this item */
-  _makeVariable: function(name, initialValue) {
-    var ret = new Variable(initialValue);
+  _makeVariable: function(name, initialValue, min, max) {
+    var ret = new Variable(initialValue, min, max);
     this._game.state.variables[this.name + "/" + name] = ret;
     this._vars[name] = ret;
     return ret;
@@ -1035,9 +1035,7 @@ ActiveItem.defineType("Lighter", {
   /* Initialize instance */
   __init__: function(capacity, fill) {
     if (! fill) fill = 0;
-    var v = this._makeVariable("fill", fill);
-    v.min = 0;
-    v.max = capacity;
+    var v = this._makeVariable("fill", fill, 0, capacity);
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
   },
@@ -1114,9 +1112,7 @@ ActiveItem.defineType("Lighter", {
 ActiveItem.defineType("Crank", {
   /* Initialize instance */
   __init__: function(speedcap, speedincr, speeddecr) {
-    var vs = this._makeVariable("speed", 0);
-    vs.min = 0;
-    vs.max = speedcap;
+    var vs = this._makeVariable("speed", 0, 0, speedcap);
     vs.addHandler(this._makeAction("_getIncrement"));
     vs.addLateHandler(this._makeAction("_updateSpeed"));
     var vr = this._makeVariable("rotation", 0);
