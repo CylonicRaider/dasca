@@ -265,6 +265,7 @@ h1 {
   width: 0%;
   height: 100%;
   background: #008000;
+  transition: width 0.2s linear;
 }
 .item-card .item-bar-pm .item-bar-content {
   margin-left: 50%;
@@ -292,4 +293,5 @@ h1 {
     jaXJjbGUgcj0iOCIgZmlsbD0iIzYwNjA2MCIvPjxsaW5lIHkyPSItMTIiIHN0cm9rZT0iIzg\
     wODA4MCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PGNpcmNsZSBjeT0iLTEyIiByPSIyIiB\
     maWxsPSIjYTBhMGEwIi8+PC9zdmc+");
+  transition: transform 0.2s linear;
 }
