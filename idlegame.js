@@ -23,10 +23,9 @@ function Scheduler(fps) {
   this.time = 0;
   this.tasks = [];
   this.contTasks = [];
+  this._nextRun = null;
   this._timer = null;
-  this._lastRun = null;
   this._onerror = null;
-  this._started = null;
 }
 
 Scheduler.prototype = {
@@ -123,30 +122,33 @@ Scheduler.prototype = {
 
   /* Perform another run of the scheduler, if it is to be running */
   _checkRun: function() {
+    this._timer = null;
     if (this.running) {
       this.run();
     } else {
-      this._lastRun = null;
+      this._nextRun = null;
     }
   },
 
   /* Force the scheduler to run (again) */
   run: function() {
     this.running = true;
-    if (this._lastRun != null) {
+    if (this._nextRun != null) {
       var now = Date.now();
-      while (this.running && this._lastRun <= now) {
+      while (this.running && this._nextRun <= now) {
         this._runIteration();
-        this._lastRun += 1000.0 / this.fps;
+        this._nextRun += 1000.0 / this.fps;
       }
     } else {
       this._runIteration();
-      this._lastRun = Date.now();
+      this._nextRun = Date.now() + 1000.0 / this.fps;
     }
     if (this.running) {
-      setTimeout(this._checkRun.bind(this), 1000.0 / this.fps, this);
+      if (this._timer == null)
+        this._timer = setTimeout(this._checkRun.bind(this),
+                                 this._nextRun - Date.now());
     } else {
-      this._lastRun = null;
+      this._nextRun = null;
     }
   },
 
