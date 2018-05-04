@@ -849,6 +849,12 @@ Item.prototype = {
     return ret;
   },
 
+  /* Create a handler for a Variable tracking the value of another Variable */
+  _makeVariableHandler: function(name) {
+    return this._game.createTaskEx("state.variables." + this.name + "/" +
+      name + ".getValue");
+  },
+
   /* Retrieve a Variable on this item */
   _getVariable: function(name) {
     if (! (name in this._vars)) {
@@ -1116,8 +1122,7 @@ ActiveItem.defineType("Crank", {
     vs.addHandler(this._makeAction("_getIncrement"));
     vs.addLateHandler(this._makeAction("_updateSpeed"));
     var vr = this._makeVariable("rotation", 0);
-    vr.addHandler(this._game.createTask("state.variables." + this.name +
-      "/speed.getValue"));
+    vr.addHandler(this._makeVariableHandler("speed"));
     vr.addLateHandler(this._makeAction("_updateRotation"));
     // speedcap is stored in the variable.
     this._speedcap = speedcap;
