@@ -423,11 +423,17 @@ function Variable(value, min, max) {
 Variable.prototype = {
   /* Retrieve the value of this Variable
    *
+   * If factor is not null, the value is multipled with it before returning.
    * This can be used in conjunction with an Action to implement a handler for
    * another Variable that references this one. (Note that storing the variable
-   * itself might lead to duplication when it is deserialized.) */
-  getValue: function() {
-    return this.value;
+   * itself might lead to duplication when it is deserialized.)
+   */
+  getValue: function(factor) {
+    if (factor != null) {
+      return this.value * factor;
+    } else {
+      return this.value;
+    }
   },
 
   /* Add a new handler to this Variable

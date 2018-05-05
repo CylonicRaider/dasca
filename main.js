@@ -307,8 +307,9 @@ Game.prototype = {
   },
 
   /* Return an object to hook up to other Variables as a derivative */
-  makeVariableHandler: function(name) {
-    return this.createTaskEx("state.variables." + name + ".getValue");
+  makeVariableHandler: function(name, factor) {
+    return this.createTaskEx("state.variables." + name + ".getValue",
+                             factor);
   },
 
   /* Return the Variable with the given name */
@@ -867,8 +868,8 @@ Item.prototype = {
   },
 
   /* Create a handler for a Variable tracking the value of another Variable */
-  _makeVariableHandler: function(name) {
-    return this._game.makeVariableHandler(this.name + "/" + name);
+  _makeVariableHandler: function(name, factor) {
+    return this._game.makeVariableHandler(this.name + "/" + name, factor);
   },
 
   /* Retrieve a Variable on this item */
@@ -1138,7 +1139,7 @@ ActiveItem.defineType("Crank", {
     vs.addHandler(this._makeAction("_getIncrement"));
     vs.addLateHandler(this._makeAction("_updateSpeed"));
     var vr = this._makeVariable("rotation", 0);
-    vr.addHandler(this._makeVariableHandler("speed"));
+    vr.addHandler(this._makeVariableHandler("speed", 3));
     vr.addLateHandler(this._makeAction("_updateRotation"));
     // speedcap is stored in the variable.
     this._speedcap = speedcap;
