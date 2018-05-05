@@ -299,6 +299,23 @@ Game.prototype = {
     this.ui._showTab(name, this.state.tabs[name].hidden);
   },
 
+  /* Create a Variable */
+  makeVariable: function(name, value, min, max) {
+    var v = new Variable(value, min, max);
+    this.state.variables[name] = v;
+    return v;
+  },
+
+  /* Return an object to hook up to other Variables as a derivative */
+  makeVariableHandler: function(name) {
+    return this.createTaskEx("state.variables." + name + ".getValue");
+  },
+
+  /* Return the Variable with the given name */
+  getVariable: function(name) {
+    return this.state.variables[name];
+  },
+
   /* Add an item */
   addItem: function(type, name) {
     var ctor = Item[type];
@@ -842,23 +859,22 @@ Item.prototype = {
   },
 
   /* Create a Variable for this item */
-  _makeVariable: function(name, initialValue, min, max) {
-    var ret = new Variable(initialValue, min, max);
-    this._game.state.variables[this.name + "/" + name] = ret;
+  _makeVariable: function(name, value, min, max) {
+    var ret = this._game.makeVariable(this.name + "/" + name, value,
+                                      min, max);
     this._vars[name] = ret;
     return ret;
   },
 
   /* Create a handler for a Variable tracking the value of another Variable */
   _makeVariableHandler: function(name) {
-    return this._game.createTaskEx("state.variables." + this.name + "/" +
-      name + ".getValue");
+    return this._game.makeVariableHandler(this.name + "/" + name);
   },
 
   /* Retrieve a Variable on this item */
   _getVariable: function(name) {
     if (! (name in this._vars)) {
-      this._vars[name] = this._game.state.variables[this.name + "/" + name];
+      this._vars[name] = this._game.getVariable(this.name + "/" + name);
     }
     return this._vars[name];
   },
