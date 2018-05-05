@@ -220,7 +220,7 @@ Game.prototype = {
     return (! old);
   },
 
-  /* Clear a flag; return whether the value changes */
+  /* Clear a flag; return whether the value changed */
   clearFlag: function(name) {
     var old = this.state.flags[name];
     this.state.flags[name] = false;
