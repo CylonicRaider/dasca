@@ -505,7 +505,8 @@ GameStory.prototype = {
 
   /* Finish looking around the engine room */
   _finishLookAroundEngines: function() {
-    this.game.addItem("Crank", "crank", 1, 2, 1);
+    this.game.makeVariable("energy", 0);
+    this.game.addItem("Crank", "crank", 1, 2, 1).attachTo("energy");
     this.game.showItem("engines", "crank");
     this.game.addItem("Button", "start-engines", "Start engines",
                       "story.tryStartEngines");
@@ -1139,7 +1140,7 @@ ActiveItem.defineType("Crank", {
     vs.addHandler(this._makeAction("_getIncrement"));
     vs.addLateHandler(this._makeAction("_updateSpeed"));
     var vr = this._makeVariable("rotation", 0);
-    vr.addHandler(this._makeVariableHandler("speed", 3));
+    vr.addHandler(this._makeVariableHandler("speed", 1));
     vr.addLateHandler(this._makeAction("_updateRotation"));
     // speedcap is stored in the variable.
     this._speedcap = speedcap;
@@ -1207,6 +1208,13 @@ ActiveItem.defineType("Crank", {
   /* Start or stop turning the crank */
   _turn: function(state) {
     this._turning = state;
+  },
+
+  /* Install the crank's speed as a derivative to varname */
+  attachTo: function(varname, factor) {
+    if (factor == null) factor = 1;
+    this._game.getVariable(varname).addHandler(
+      this._makeVariableHandler("speed", factor));
   }
 });
 
