@@ -1218,6 +1218,39 @@ ActiveItem.defineType("Crank", {
   }
 });
 
+/* A gauge that displays the value of a Variable
+ *
+ * Currently, the Variable must have a minimum of zero. */
+Item.defineType("Gauge", {
+  /* Initialize instance */
+  __init__: function(varname, max, description) {
+    this.varname = varname;
+    this.max = max;
+    this.description = description;
+    this._game.getVariable(varname).addLateHandler(
+      this._makeAction("_updatePointer"));
+    this._max = null;
+  },
+
+  /* Render the Item into a DOM node */
+  _render: function() {
+    var ret = GAUGE_NODE.cloneNode(true);
+    $sel(".description", ret).textContent = this.description;
+    this._pointer = $sel(".pointer", ret);
+    return ret;
+  },
+
+  /* Update the pointer of the gauge */
+  _updatePointer: function(value, variable) {
+    if (this._pointer == null)
+      this.render();
+    if (this._max == null)
+      this._max = (this.max == null) ? variable.max : this.max;
+    this._pointer.style.transform = "rotate(" + (value / this._max * 180) +
+      "deg)";
+  }
+});
+
 /* *** Initialization *** */
 
 var Dasca = {
