@@ -284,18 +284,21 @@ Game.prototype = {
     if (! options) options = {};
     options.name = dispname;
     if (! options.items) options.items = [];
+    if (! options.gauges) options.gauges = [];
     if (this.state.tabOrder.indexOf(name) == -1)
       this.state.tabOrder.push(name);
     this.state.tabs[name] = options;
     this.ui._addTab(name, dispname, options);
-    this.ui._updateItems(name);
+    this.ui._updateItems(name, "items");
+    this.ui._updateItems(name, "gauges");
   },
 
   /* Select a UI tab */
   showTab: function(name, hidden) {
     if (hidden != null) this.state.tabs[name].hidden = hidden;
     this.state.currentTab = name;
-    this.ui._updateItems(name);
+    this.ui._updateItems(name, "items");
+    this.ui._updateItems(name, "gauges");
     this.ui._showTab(name, this.state.tabs[name].hidden);
   },
 
@@ -344,7 +347,7 @@ Game.prototype = {
   /* Hide the given item from sight */
   hideItem: function(tab, name) {
     /* Actually already implemented */
-    this.showItem(tba, name, false);
+    this.showItem(tab, name, false);
   },
 
   /* Remove the named item from storage and display */
@@ -357,8 +360,31 @@ Game.prototype = {
       var items = this.state.tabs[t].items;
       var idx = items.indexOf(name);
       if (idx != -1) items.splice(idx, 1);
+      var gauges = this.state.tabs[t].gauges;
+      idx = gauges.indexOf(name);
+      if (idx != -1) gauges.splice(idx, 1);
     }
     this.ui._removeItem(name);
+  },
+
+  /* Show a gauge in a given UI tab or hide it */
+  showGauge: function(tab, name, show) {
+    if (show == null) show = true;
+    var items = this.state.tabs[tab].gauges;
+    var idx = items.indexOf(name);
+    if (idx != -1) items.splice(idx, 1);
+    if (show) items.push(name);
+    this.ui._showGauge(tab, name);
+  },
+
+  /* Hide the given gauge from sight */
+  hideGauge: function(tab, name) {
+    this.showGauge(tab, name, false);
+  },
+
+  /* Remove the given gauge from storage and display */
+  removeGauge: function(name) {
+    this.removeItem(name);
   },
 
   /* Pause the game */
@@ -512,6 +538,8 @@ GameStory.prototype = {
                       "story.tryStartEngines");
     this.game.showItem("engines", "start-engines");
     this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
+    this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERG");
+    this.game.showGauge("engines", "total-energy");
   },
 
   /* Attempt starting the engines
@@ -580,10 +608,10 @@ function GameState(game) {
   this.items = {};
   // {string -> {string -> *}}. Name is the codename of a tab; value contains
   // the display name of the tab as "name", the names of the items in this
-  // tab as "items", and, optionally, whether its button should not be
-  // displayed as "hidden".
+  // tab as "items", the names of the gauges in this tab as "gauges", and,
+  // optionally, whether its button should not be displayed as "hidden".
   this.tabs = {};
-  // [string] The order in which the tab buttons should be arranged.
+  // [string]. The order in which the tab buttons should be arranged.
   this.tabOrder = [];
   // string. Contains the codename of the current tab, or null for none.
   this.currentTab = null;
@@ -663,7 +691,8 @@ GameUI.prototype = {
       }
       var curTab = this.game.state.currentTab;
       if (curTab) {
-        this._updateItems(curTab);
+        this._updateItems(curTab, "items");
+        this._updateItems(curTab, "gauges");
         this._showTab(curTab, this.game.state.tabs[curTab].hidden);
       }
       if (state.flags.controlsVisible) {
@@ -729,7 +758,10 @@ GameUI.prototype = {
       this._sortTabs();
     }
     this._tabs[name] = $makeNode("div", "selectable layer inset game-tab",
-      {id: "tab-" + name});
+        {id: "tab-" + name}, [
+      ["div", "items row-all"],
+      ["div", "gauges"]
+    ]);
     $idx("mainpane", this.root).appendChild(this._tabs[name]);
   },
 
@@ -777,29 +809,36 @@ GameUI.prototype = {
   _showItem: function(tabname, name) {
     if (tabname == this.game.state.currentTab)
       $replaceClass(this._getItem(name), "fade-in-suppressed", "fade-in");
-    this._updateItems(tabname);
+    this._updateItems(tabname, "items");
+  },
+
+  /* Show a gauge in a tab */
+  _showGauge: function(tabname, name) {
+    if (tabname == this.game.state.currentTab)
+      $replaceClass(this._getItem(name), "fade-in-suppressed", "fade-in");
+    this._updateItems(tabname, "gauges");
   },
 
   /* Ensure all items are correctly present in a tab */
-  _updateItems: function(tabname) {
-    var tabNode = $idx("tab-" + tabname, this.root);
-    var order = this.game.state.tabs[tabname].items;
+  _updateItems: function(tabname, section) {
+    var container = $sel("#tab-" + tabname + " ." + section, this.root);
+    var order = this.game.state.tabs[tabname][section];
     order = (order) ? order.slice() : [];
     order.reverse();
     var lastNode = null;
     for (var i = 0; i < order.length; i++) {
       var node = this._getItem(order[i]);
-      if (node.parentNode != tabNode) {
-        tabNode.insertBefore(node, lastNode);
+      if (node.parentNode != container) {
+        container.insertBefore(node, lastNode);
       }
       while (node.nextElementSibling != lastNode) {
-        tabNode.removeChild(node.nextElementSibling);
+        container.removeChild(node.nextElementSibling);
       }
       lastNode = node;
     }
     if (lastNode) {
       while (lastNode.previousElementSibling)
-        tabNode.removeChild(lastNode.previousElementSibling);
+        container.removeChild(lastNode.previousElementSibling);
     }
   },
 
@@ -1234,8 +1273,10 @@ Item.defineType("Gauge", {
 
   /* Render the Item into a DOM node */
   _render: function() {
-    var ret = GAUGE_NODE.cloneNode(true);
-    $sel(".description", ret).textContent = this.description;
+    var ret = $makeNode("span", "gauge fade-in", [
+      GAUGE_NODE.cloneNode(true)
+    ]);
+    $sel(".desc", ret).textContent = this.description;
     this._pointer = $sel(".pointer", ret);
     return ret;
   },
