@@ -104,7 +104,7 @@ function $replaceClass(elem, from, to) {
 /* base64-encode a string with line wrapping */
 function b64encw(s) {
   // "Binary" to "ASCII"?
-  return btoa(s).replace(/.{1,78}/g, "$&\n").trim();
+  return btoa(s).replace(/.{78}/g, "$&\n").trim();
 }
 
 /* Undo b64encw */
