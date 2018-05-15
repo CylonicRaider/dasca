@@ -757,10 +757,10 @@ GameUI.prototype = {
       $idx("tabbar", this.root).appendChild(this._tabButtons[name]);
       this._sortTabs();
     }
-    this._tabs[name] = $makeNode("div", "selectable layer inset game-tab",
+    this._tabs[name] = $makeNode("div", "selectable layer inset game-tab col",
         {id: "tab-" + name}, [
       ["div", "items row-all"],
-      ["div", "gauges"]
+      ["div", "gauges row row-wrap"]
     ]);
     $idx("mainpane", this.root).appendChild(this._tabs[name]);
   },

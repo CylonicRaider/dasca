@@ -152,6 +152,9 @@ h1 {
   height: 1.2em;
   font-size: 0.75em;
 }
+#mainscreen .row-wrap {
+  flex-wrap: wrap;
+}
 #mainscreen .col {
   display: flex;
   flex-direction: column;
