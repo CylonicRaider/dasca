@@ -502,3 +502,32 @@ Variable.prototype = {
 
   constructor: Variable
 };
+
+/* *** FlagSet ***
+ *
+ * A set of bits which can be fixed on, off, or derived from the values of
+ * other flags. */
+
+/* Construct a new instance */
+function FlagSet() {
+  this.values = {};
+  this.derived = {};
+  this.lateHandlers = {};
+  this._revDerived = {};
+}
+
+FlagSet.prototype = {
+  /* Retrieve the value of a flag */
+  get: function(name) {
+    return this.values[name] || false;
+  },
+
+  /* Assign the value of a flag */
+  set: function(name, value) {
+    if (this.derived.hasOwnProperty(name))
+      throw new Error("Cannot explicitly assign derived flag");
+    this.values[name] = value;
+  },
+
+  constructor: FlagSet
+};
