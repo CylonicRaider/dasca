@@ -513,7 +513,7 @@ function FlagSet() {
   this.values = {};
   this.derived = {};
   this.lateHandlers = {};
-  this._revDerived = {};
+  this._revDerived = null;
 }
 
 FlagSet.prototype = {
@@ -526,7 +526,62 @@ FlagSet.prototype = {
   set: function(name, value) {
     if (this.derived.hasOwnProperty(name))
       throw new Error("Cannot explicitly assign derived flag");
+    this._set(name, value);
+  },
+
+  /* Assign the value of a flag without validity checks */
+  _set: function(name, value) {
     this.values[name] = value;
+    var dirty = this._getRevDerived(name);
+    if (dirty) {
+      for (var i = 0; i < dirty.length; i++) {
+        this._refresh(dirty[i]);
+      }
+    }
+  },
+
+  /* Build indexes of derived values if necessary and return a particular
+   * one */
+  _getRevDerived: function(name) {
+    if (this._revDerived == null) {
+      this._revDerived = {};
+      for (var k in this.derived) {
+        if (! this.derived.hasOwnProperty(k)) continue;
+        var v = this.derived[k];
+        // v[0] is the operator.
+        for (var i = 1; i < v.length; i++) {
+          if (! this._revDerived.hasOwnProperty(v[i])) {
+            this._revDerived[v[i]] = [k];
+          } else {
+            this._revDerived[v[i]].push(k);
+          }
+        }
+      }
+    }
+    return this._revDerived[name];
+  },
+
+  /* Update a derived value */
+  _refresh: function(name) {
+    var entry = this.derived[name];
+    if (! entry) return;
+    var result;
+    switch (entry[0]) {
+      case "and":
+        result = entry.every(function(ent, index) {
+          return (index == 0) || this.values[ent];
+        }.bind(this));
+        break;
+      case "or":
+        result = entry.some(function(ent, index) {
+          return (index != 0) && this.values[ent];
+        }.bind(this));
+        break;
+      default:
+        throw new Error("Unsupported derived flag operation: " +
+          entry[0]);
+    }
+    this._set(name, result);
   },
 
   constructor: FlagSet
