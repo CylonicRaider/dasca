@@ -535,7 +535,7 @@ FlagSet.prototype = {
     var dirty = this._getRevDerived(name);
     if (dirty) {
       for (var i = 0; i < dirty.length; i++) {
-        this._refresh(dirty[i]);
+        this._refresh(dirty[i], value);
       }
     }
   },
@@ -562,18 +562,18 @@ FlagSet.prototype = {
   },
 
   /* Update a derived value */
-  _refresh: function(name) {
+  _refresh: function(name, newValue) {
     var entry = this.derived[name];
     if (! entry) return;
     var result;
     switch (entry[0]) {
       case "and":
-        result = entry.every(function(ent, index) {
+        result = newValue && entry.every(function(ent, index) {
           return (index == 0) || this.values[ent];
         }.bind(this));
         break;
       case "or":
-        result = entry.some(function(ent, index) {
+        result = newValue || entry.some(function(ent, index) {
           return (index != 0) && this.values[ent];
         }.bind(this));
         break;
