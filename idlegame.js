@@ -533,7 +533,9 @@ FlagSet.prototype = {
    *
    * name is the name to be used by the flag; operation is one of the strings
    * "and" or "or", and defines the operation to be used for composing the
-   * flags named by the remaining (variadic) arguments. */
+   * flags named by the remaining (variadic) arguments.
+   * After creation, any handlers for the flag's name are invoked
+   * unconditionally. */
   derive: function(name, operation) {
     this.derived[name] = Array.prototype.slice.call(arguments, 1);
     delete this.values[name];
@@ -541,13 +543,43 @@ FlagSet.prototype = {
     this._refresh(name);
   },
 
+  /* Install a handler for the flag named name
+   *
+   * Whenever the named flag changes, the handler's cb() method is invoked
+   * with the value of the updated flag, the name of the update flag, and this
+   * FlagSet instance as arguments, in that order.
+   * The same handler may be used for multiple flags, although it will be
+   * duplicated on deserialization. */
+  addLateHandler: function(name, hnd) {
+    if (this.lateHandlers[name]) {
+      this.lateHandlers[name].push(hnd);
+    } else {
+      this.lateHandlers[name] = [hnd];
+    }
+  },
+
+  /* Remove the given handler from the given flag again */
+  removeLateHandler: function(name, hnd) {
+    var handlers = this.lateHandlers[name];
+    if (! handlers) return;
+    var idx = handlers.indexOf(hnd);
+    if (idx != -1) handlers.splice(idx, 1);
+  },
+
   /* Assign the value of a flag without validity checks */
   _set: function(name, value) {
+    if (value == this.values[name]) return;
     this.values[name] = value;
     var dirty = this._getRevDerived(name);
     if (dirty) {
       for (var i = 0; i < dirty.length; i++) {
         this._refresh(dirty[i], value);
+      }
+    }
+    var handlers = this.lateHandlers[name];
+    if (handlers) {
+      for (var i = 0; i < handlers.length; i++) {
+        handlers[i].cb(value, name, this);
       }
     }
   },
