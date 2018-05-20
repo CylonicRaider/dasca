@@ -529,6 +529,18 @@ FlagSet.prototype = {
     this._set(name, value);
   },
 
+  /* Create a derived flag
+   *
+   * name is the name to be used by the flag; operation is one of the strings
+   * "and" or "or", and defines the operation to be used for composing the
+   * flags named by the remaining (variadic) arguments. */
+  derive: function(name, operation) {
+    this.derived[name] = Array.prototype.slice.call(arguments, 1);
+    delete this.values[name];
+    this._revDerived = null;
+    this._refresh(name);
+  },
+
   /* Assign the value of a flag without validity checks */
   _set: function(name, value) {
     this.values[name] = value;
@@ -568,11 +580,13 @@ FlagSet.prototype = {
     var result;
     switch (entry[0]) {
       case "and":
+        if (newValue == null) newValue = true;
         result = newValue && entry.every(function(ent, index) {
           return (index == 0) || this.values[ent];
         }.bind(this));
         break;
       case "or":
+        if (newValue == null) newValue = false;
         result = newValue || entry.some(function(ent, index) {
           return (index != 0) && this.values[ent];
         }.bind(this));
