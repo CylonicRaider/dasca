@@ -519,7 +519,7 @@ function FlagSet() {
 FlagSet.prototype = {
   /* Retrieve the value of a flag */
   get: function(name) {
-    return this.values[name] || false;
+    return this.values[name];
   },
 
   /* Assign the value of a flag */
