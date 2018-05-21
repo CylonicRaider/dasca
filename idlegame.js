@@ -522,11 +522,13 @@ FlagSet.prototype = {
     return this.values[name];
   },
 
-  /* Assign the value of a flag */
+  /* Assign the value of a flag
+   *
+   * Returns whether the value of the flag changed. */
   set: function(name, value) {
     if (this.derived.hasOwnProperty(name))
       throw new Error("Cannot explicitly assign derived flag");
-    this._set(name, value);
+    return this._set(name, value);
   },
 
   /* Create a derived flag
@@ -568,7 +570,7 @@ FlagSet.prototype = {
 
   /* Assign the value of a flag without validity checks */
   _set: function(name, value) {
-    if (value == this.values[name]) return;
+    if (value == this.values[name]) return false;
     this.values[name] = value;
     var dirty = this._getRevDerived(name);
     if (dirty) {
@@ -582,6 +584,7 @@ FlagSet.prototype = {
         handlers[i].cb(value, name, this);
       }
     }
+    return true;
   },
 
   /* Build indexes of derived values if necessary and return a particular
