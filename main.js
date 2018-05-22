@@ -210,21 +210,17 @@ Game.prototype = {
 
   /* Get the value of a flag */
   getFlag: function(name) {
-    return this.state.flags[name];
+    return this.state.flags.get(name);
   },
 
   /* Set a flag; return whether the value changed */
   setFlag: function(name) {
-    var old = this.state.flags[name];
-    this.state.flags[name] = true;
-    return (! old);
+    return this.state.flags.set(name, true);
   },
 
   /* Clear a flag; return whether the value changed */
   clearFlag: function(name) {
-    var old = this.state.flags[name];
-    this.state.flags[name] = false;
-    return (!! old);
+    return this.state.flags.set(name, false);
   },
 
   /* Create a task for addTask
@@ -600,8 +596,8 @@ function GameState(game) {
   this._game = game;
   // Scheduler.
   this.scheduler = new Scheduler(10);
-  // {string -> bool}. Can be used to show one-off messages.
-  this.flags = {};
+  // FlagSet. Can be used to show one-off messages.
+  this.flags = new FlagSet();
   // [string]. Stores log messages.
   this.messages = [];
   // {string -> Item}. The home of the items.
@@ -695,7 +691,7 @@ GameUI.prototype = {
         this._updateItems(curTab, "gauges");
         this._showTab(curTab, this.game.state.tabs[curTab].hidden);
       }
-      if (state.flags.controlsVisible) {
+      if (this.game.getFlag('controlsVisible')) {
         $idx("bottombar", this.root).classList.remove("hidden");
       }
       this._updatePause();
@@ -732,7 +728,7 @@ GameUI.prototype = {
   /* Reveal the game controls */
   showControls: function() {
     var bar = $idx("bottombar", this.root);
-    this.game.state.flags.controlsVisible = true;
+    this.game.setFlag('controlsVisible');
     bar.classList.remove("hidden");
   },
 
