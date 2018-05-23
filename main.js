@@ -477,7 +477,7 @@ GameStory.prototype = {
   showLighter: function() {
     this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
-    this.game.addItem("Lighter", "lighter", 100, 70);
+    this.game.addItem("Lighter", "lighter", 100, 70).bindFlag("lighter-lit");
     this.game.showItem("start", "lighter");
     this.game.addItem("Button", "look-around-start", "Look around",
       "story.lookAroundStart").showWhenActive("start", "lighter");
@@ -949,17 +949,15 @@ ActiveItem.prototype.setActive = function(state) {
   if (state == this.active) return false;
   this.active = state;
   for (var i = 0; i < this.listeners.length; i++) {
-    if (this.listeners[i].cb(this))
-      this.listeners.splice(i--, 1);
+    this.listeners[i].cb(this.active, this);
   }
 };
 
 /* Convenience function for adding an Action as a change listener
  *
  * The invoked method receives -- aside from fixed arguments that are given
- * to this method variadically -- one single argument, namely this item.
- * If the return value of the listener method is true, the listener is
- * removed. */
+ * to this method variadically -- two arguments, namely this Item's activity
+ * state, and this Item. */
 ActiveItem.prototype.addListener = function(method) {
   this.listeners.push(this._game.createTask.apply(this._game, arguments));
 };
@@ -978,6 +976,11 @@ ActiveItem.prototype.removeListenerFor = function(method) {
       break;
     }
   }
+};
+
+/* Set the flag whenever this item is active and clear it otherwise */
+ActiveItem.prototype.bindFlag = function(flag) {
+  this.addListener("state.flags.set", flag);
 };
 
 ActiveItem.prototype.constructor = ActiveItem;
@@ -1076,13 +1079,13 @@ Item.defineType("Button", {
     if (item != null) {
       var itemObj = this._game.state.items[item];
       itemObj.addListener(methName, tab);
-      this._updateVisibility(tab, itemObj);
+      this._updateVisibility(tab, itemObj.active);
     }
   },
 
   /* Conditional visibility backend */
-  _updateVisibility: function(tab, item) {
-    this._game.showItem(tab, this.name, (!! item.active));
+  _updateVisibility: function(tab, active) {
+    this._game.showItem(tab, this.name, (!! active));
   }
 });
 
