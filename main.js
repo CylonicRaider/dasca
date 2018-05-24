@@ -458,6 +458,12 @@ GameStory.prototype = {
     [null, 0, "story._finishLookAroundEngines"]
   ],
 
+  /* Show a story fragment */
+  _showStoryFragment: function(parts, delayIfNot) {
+    this.game.state.scheduler.addContTask(new StoryFragment(this.game,
+      parts, delayIfNot));
+  },
+
   /* Start */
   init: function() {
     this.game.addTab("start", "Bridge", {hidden: true});
@@ -478,15 +484,19 @@ GameStory.prototype = {
     this.game.removeItem("show-lighter");
     this.game.showMessage("You find a lighter.");
     this.game.addItem("Lighter", "lighter", 100, 70).bindFlag("lighter-lit");
+    this.game.state.flags.derive("lit", "or", "lighter-lit");
+    this.game.state.flags.addLateHandler("lit",
+      this.game.createTask("story._updateLighting"));
     this.game.showItem("start", "lighter");
     this.game.addItem("Button", "look-around-start", "Look around",
       "story.lookAroundStart").showWhenActive("start", "lighter");
   },
 
-  /* Show a story fragment */
-  _showStoryFragment: function(parts, delayIfNot) {
-    this.game.state.scheduler.addContTask(new StoryFragment(this.game,
-      parts, delayIfNot));
+  /* Write a message when lighting conditions change */
+  _updateLighting: function(state) {
+    if (! state) {
+      this.game.showMessage("It is dark again.");
+    }
   },
 
   /* Gather first impressions of the player's surroundings */
@@ -1155,10 +1165,9 @@ ActiveItem.defineType("Lighter", {
       if (this._game.setFlag("lighter-space")) {
         this._game.showMessage("The flame looks funny... Oh, right.");
         this._game.showMessage(["i", null, "Lack of gravity."]);
+      } else {
+        this._game.showMessage("The flame is blue and spherical.");
       }
-      this._game.showMessage("The flame is blue and spherical.");
-    } else {
-      this._game.showMessage("It is dark again.");
     }
     ActiveItem.prototype.setActive.call(this, state);
     this._updateButton();
