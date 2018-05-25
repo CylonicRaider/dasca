@@ -1164,7 +1164,7 @@ ActiveItem.defineType("Lighter", {
     if (state) {
       if (this._game.setFlag("lighter-space")) {
         this._game.showMessage("The flame looks funny... Oh, right.");
-        this._game.showMessage(["i", null, "Lack of gravity."]);
+        this._game.showMessage(["i", null, "Weightlessness."]);
       } else {
         this._game.showMessage("The flame is blue and spherical.");
       }
