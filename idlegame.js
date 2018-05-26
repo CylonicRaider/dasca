@@ -635,3 +635,27 @@ FlagSet.prototype = {
 
   constructor: FlagSet
 };
+
+/* *** Animator ***
+ *
+ * Feature-deprived roll-your-own CSS transitions because the real CSS
+ * transitions do not work well enough. */
+
+/* Construct a new instance */
+function Animator() {
+  this._timer = null;
+}
+
+Animator.prototype = {
+  /* Perform a single round of animation and schedule another one */
+  run: function() {
+    if (this._timer == null)
+      this._timer = requestAnimationFrame(function() {
+        this._timer = null;
+        this.run();
+      }.bind(this));
+    /* TODO */
+  },
+
+  constructor: Animator
+};
