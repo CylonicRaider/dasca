@@ -639,14 +639,42 @@ FlagSet.prototype = {
 /* *** Animator ***
  *
  * Feature-deprived roll-your-own CSS transitions because the real CSS
- * transitions do not work well enough. */
+ * transitions do not work well enough.
+ *
+ * Animator instances do *not* cooperate with serialization; create them anew
+ * together with your DOM. */
 
 /* Construct a new instance */
 function Animator() {
+  this.animatables = {};
   this._timer = null;
+  this._nextID = 1;
 }
 
 Animator.prototype = {
+  /* Register an animatable with an initial value and a rendering function
+   *
+   * value is the intial value of the variable to be animated; it must be
+   * numeric.
+   * render is a function (i.e. *not* an object with a cb property) that is
+   * invoked to actually apply the value calculated by the animator.
+   * The initial value is rendered unconditionally the first time run() is
+   * invoked.
+   *
+   * Returns the ID of the animatable. */
+  register: function(value, render) {
+    var id = this._nextID++;
+    this.animatables[id] = {value: value, oldValue: null, render: render};
+    return id;
+  },
+
+  /* Set the value of the given animatable to value
+   *
+   * This will schedule a transition as appropriate. */
+  set: function(id, value) {
+    this.animatables[id].value = value;
+  },
+
   /* Perform a single round of animation and schedule another one */
   run: function() {
     if (this._timer == null)
@@ -654,7 +682,12 @@ Animator.prototype = {
         this._timer = null;
         this.run();
       }.bind(this));
-    /* TODO */
+    for (var k in this.animatables) {
+      var v = this.animatables[k];
+      if (v.value == v.oldValue) continue;
+      v.render(v.value);
+      v.oldValue = v.value;
+    }
   },
 
   constructor: Animator
