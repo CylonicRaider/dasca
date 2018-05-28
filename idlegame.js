@@ -644,9 +644,14 @@ FlagSet.prototype = {
  * Animator instances do *not* cooperate with serialization; create them anew
  * together with your DOM. */
 
-/* Construct a new instance */
-function Animator() {
+/* Construct a new instance
+ *
+ * transitionLength is the length (in seconds) that transitioning to a new
+ * value should take; the value can be reconfigured after instantiation via
+ * the same-named property. */
+function Animator(transitionLength) {
   this.animatables = {};
+  this.transitionLength = transitionLength;
   this._timer = null;
   this._nextID = 1;
 }
@@ -664,7 +669,8 @@ Animator.prototype = {
    * Returns the ID of the animatable. */
   register: function(value, render) {
     var id = this._nextID++;
-    this.animatables[id] = {value: value, oldValue: null, render: render};
+    this.animatables[id] = {value: value, oldValue: null, render: render,
+      transitions: {}};
     return id;
   },
 
@@ -672,7 +678,14 @@ Animator.prototype = {
    *
    * This will schedule a transition as appropriate. */
   set: function(id, value) {
-    this.animatables[id].value = value;
+    if (this.transitionLength == 0) {
+      this.animatables[id].value = value;
+    } else {
+      // [target value, transition duration, target time]
+      this.animatables[id].transitions[this._nextID++] = [value,
+        this.transitionLength, performance.now() + this.transitionLength *
+        1e3];
+    }
   },
 
   /* Perform a single round of animation and schedule another one */
