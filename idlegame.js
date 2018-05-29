@@ -669,8 +669,8 @@ Animator.prototype = {
    * Returns the ID of the animatable. */
   register: function(value, render) {
     var id = this._nextID++;
-    this.animatables[id] = {value: value, oldValue: null, render: render,
-      transitions: {}};
+    this.animatables[id] = {value: value, newValue: value, oldValue: null,
+      render: render, transitions: {}};
     return id;
   },
 
@@ -678,13 +678,16 @@ Animator.prototype = {
    *
    * This will schedule a transition as appropriate. */
   set: function(id, value) {
+    var anim = this.animatables[id];
     if (this.transitionLength == 0) {
-      this.animatables[id].value = value;
+      anim.value = value;
+      anim.newValue = value;
     } else {
-      // [target value, transition duration, target time]
-      this.animatables[id].transitions[this._nextID++] = [value,
-        this.transitionLength, performance.now() + this.transitionLength *
-        1e3];
+      // [target value, target time, value difference, transition duration]
+      anim.transitions[this._nextID++] = [value, performance.now() +
+        this.transitionLength * 1e3, value - anim.newValue,
+        this.transitionLength];
+      anim.newValue = value;
     }
   },
 
