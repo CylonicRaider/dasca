@@ -683,10 +683,11 @@ Animator.prototype = {
       anim.value = value;
       anim.newValue = value;
     } else {
-      // [target value, target time, value difference, transition duration]
-      anim.transitions[this._nextID++] = [value, performance.now() +
-        this.transitionLength * 1e3, value - anim.newValue,
-        this.transitionLength];
+      // [target value, target time, value difference, transition duration,
+      // last update]
+      var now = performance.now();
+      anim.transitions[this._nextID++] = [value, now + this.transitionLength *
+        1e3, value - anim.newValue, this.transitionLength, now];
       anim.newValue = value;
     }
   },
@@ -698,11 +699,23 @@ Animator.prototype = {
         this._timer = null;
         this.run();
       }.bind(this));
+    var now = performance.now();
+    var dellist = [];
     for (var k in this.animatables) {
       var v = this.animatables[k];
+      for (var l in v.transitions) {
+        var t = v.transitions[l];
+        var delta = Math.min(now, t[1]) - t[4];
+        v.value += t[2] * delta / t[3];
+        if (t[1] >= now) dellist.push([k, l]);
+        t[4] = now;
+      }
       if (v.value == v.oldValue) continue;
       v.render(v.value);
       v.oldValue = v.value;
+    }
+    for (var i = 0; i < dellist.length; i++) {
+      delete this.animatables[i[0]].transitions[i[1]];
     }
   },
 
