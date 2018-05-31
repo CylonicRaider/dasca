@@ -682,7 +682,7 @@ Animator.prototype = {
     if (this.transitionLength == 0) {
       anim.value = value;
       anim.newValue = value;
-    } else {
+    } else if (value != anim.newValue) {
       // [target value, target time, value difference, transition duration,
       // last update]
       var now = performance.now();
