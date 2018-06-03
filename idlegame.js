@@ -670,7 +670,7 @@ Animator.prototype = {
   register: function(value, render) {
     var id = this._nextID++;
     this.animatables[id] = {value: value, newValue: value, oldValue: null,
-      render: render, transitions: {}};
+      render: render, transitions: []};
     return id;
   },
 
@@ -686,8 +686,8 @@ Animator.prototype = {
       // [target value, target time, value difference, transition duration,
       // last update]
       var now = performance.now();
-      anim.transitions[this._nextID++] = [value, now + this.transitionLength *
-        1e3, value - anim.newValue, this.transitionLength, now];
+      anim.transitions.push([value, now + this.transitionLength *
+        1e3, value - anim.newValue, this.transitionLength, now]);
       anim.newValue = value;
     }
   },
@@ -703,19 +703,17 @@ Animator.prototype = {
     var dellist = [];
     for (var k in this.animatables) {
       var v = this.animatables[k];
-      for (var l in v.transitions) {
-        var t = v.transitions[l];
-        var delta = Math.min(now, t[1]) - t[4];
-        v.value += t[2] * delta / t[3];
-        if (t[1] >= now) dellist.push([k, l]);
-        t[4] = now;
+      if (v.transitions.length) {
+        v.transitions = v.transitions.filter(function(t) {
+          var delta = Math.min(now, t[1]) - t[4];
+          v.value += t[2] * delta / t[3];
+          t[4] = now;
+          return (t[1] < now);
+        }.bind(this));
       }
       if (v.value == v.oldValue) continue;
       v.render(v.value);
       v.oldValue = v.value;
-    }
-    for (var i = 0; i < dellist.length; i++) {
-      delete this.animatables[i[0]].transitions[i[1]];
     }
   },
 
