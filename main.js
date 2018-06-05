@@ -179,6 +179,7 @@ function Game(state, storage) {
   this.storage = storage;
   this.ui = new GameUI(this);
   this.story = new GameStory(this);
+  this.animator = new Animator();
   this.running = true;
   this.paused = false;
   this.ui.render();
