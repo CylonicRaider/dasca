@@ -659,15 +659,16 @@ function Animator(transitionLength) {
 Animator.prototype = {
   /* Register an animatable with an initial value and a rendering function
    *
-   * value is the intial value of the variable to be animated; it must be
-   * numeric.
    * render is a function (i.e. *not* an object with a cb property) that is
    * invoked to actually apply the value calculated by the animator.
    * The initial value is rendered unconditionally the first time run() is
    * invoked.
+   * value is the intial value of the variable to be animated; it must be
+   * numeric or null; in the latter case, no transition is performed when
+   * the value is set first.
    *
    * Returns the ID of the animatable. */
-  register: function(value, render) {
+  register: function(render, value) {
     var id = this._nextID++;
     this.animatables[id] = {value: value, newValue: value, oldValue: null,
       render: render, transitions: []};
@@ -679,7 +680,7 @@ Animator.prototype = {
    * This will schedule a transition as appropriate. */
   set: function(id, value) {
     var anim = this.animatables[id];
-    if (this.transitionLength == 0) {
+    if (this.transitionLength == 0 || anim.value == null) {
       anim.value = value;
       anim.newValue = value;
     } else if (value != anim.newValue) {
