@@ -1111,6 +1111,7 @@ ActiveItem.defineType("Lighter", {
     var v = this._makeVariable("fill", fill, 0, capacity);
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
+    this._animID = null;
   },
 
   /* Deplete the lighter's fuel */
@@ -1126,8 +1127,13 @@ ActiveItem.defineType("Lighter", {
       ["div", "item-bar", [["div", "item-bar-content"]]]
     ]);
     $listen($sel(".item-use", ret), "click", this.use.bind(this));
-    this._meter = $sel(".item-bar-content", ret);
+    var meterNode = $sel(".item-bar-content", ret);
     this._button = $sel(".item-use", ret);
+    this._animID = this._game.animator.register(function(value) {
+      value = value * 100 + "%";
+      if (meterNode.style.width != value)
+        meterNode.style.width = value;
+    });
     this._updateMeter();
     this._updateButton();
     return ret;
@@ -1136,13 +1142,11 @@ ActiveItem.defineType("Lighter", {
   /* Update the fill meter */
   _updateMeter: function() {
     /* Update fill meter */
-    if (this._meter == null) this.render();
+    if (this._animID == null) this.render();
     var v = this._getVariable("fill");
     if (v.value == 0 && this.active) this.setActive(false);
-    var f = Math.round(v.value / v.max * 10000) / 100;
-    var fill = f + "%";
-    if (this._meter.style.width != fill)
-      this._meter.style.width = fill;
+    var f = Math.round(v.value / v.max * 10000) / 10000;
+    this._game.animator.set(this._animID, f);
   },
 
   /* Update the action button */
@@ -1195,8 +1199,8 @@ ActiveItem.defineType("Crank", {
     this.speedincr = speedincr;
     this.speeddecr = speeddecr;
     this._turning = false;
-    this._icon = null;
-    this._meter = null;
+    this._iconAnimID = null;
+    this._meterAnimID = null;
   },
 
   /* Render the item into a UI node */
@@ -1223,9 +1227,15 @@ ActiveItem.defineType("Crank", {
           self._turn(false);
       });
     });
-    this._icon = $sel(".item-icon span", ret);
-    this._meter = $sel(".item-bar-content", ret);
-    /* Do not modulo-reduce while running to avoid problems with CSS
+    var iconContent = $sel(".item-icon span", ret);
+    var meterContent = $sel(".item-bar-content", ret);
+    this._iconAnimID = this._game.animator.register(function(value) {
+      iconContent.style.width = value * 100 + "%";
+    });
+    this._meterAnimID = this._game.animator.register(function(value) {
+      meterContent.style.transform = "rotate(" + (value * 360) + "deg)";
+    });
+    /* Do not modulo-reduce while running to avoid problems with
      * transitions */
     this._getVariable("rotation").value %= 1;
     this._updateSpeed();
@@ -1242,15 +1252,15 @@ ActiveItem.defineType("Crank", {
   /* Update the rotation speed */
   _updateSpeed: function() {
     var variable = this._getVariable("speed");
-    if (this._meter == null) this.render();
-    this._meter.style.width = (variable.value / variable.max * 100) + "%";
+    if (this._meterAnimID == null) this.render();
+    this._game.animator.set(this._meterAnimID, variable.value / variable.max);
   },
 
   /* Update the display angle */
   _updateRotation: function(now) {
     var variable = this._getVariable("rotation");
-    if (this._icon == null) this.render();
-    this._icon.style.transform = "rotate(" + (variable.value * 360) + "deg)";
+    if (this._iconAnimID == null) this.render();
+    this._game.animator.set(this._iconAnimID, variable.value);
   },
 
   /* Start or stop turning the crank */
