@@ -179,7 +179,7 @@ function Game(state, storage) {
   this.storage = storage;
   this.ui = new GameUI(this);
   this.story = new GameStory(this);
-  this.animator = new Animator();
+  this.animator = new Animator(0.2);
   this.running = true;
   this.paused = false;
   this.ui.render();
@@ -189,6 +189,7 @@ function Game(state, storage) {
     this.story.init();
   }
   this.state.scheduler.run();
+  this.animator.run();
 }
 
 Game.prototype = {
