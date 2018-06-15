@@ -701,7 +701,6 @@ Animator.prototype = {
         this.run();
       }.bind(this));
     var now = performance.now();
-    var dellist = [];
     for (var k in this.animatables) {
       var v = this.animatables[k];
       if (v.transitions.length) {
