@@ -684,12 +684,12 @@ Animator.prototype = {
       anim.value = value;
       anim.newValue = value;
     } else if (value != anim.newValue) {
-      // [target value, target time, value difference, transition duration,
-      // last update]
+      // [slope, target time]
       var now = performance.now();
-      anim.transitions.push([value, now + this.transitionLength *
-        1e3, value - anim.newValue, this.transitionLength, now]);
+      anim.transitions.push([(value - anim.newValue) /
+        (this.transitionLength * 1e3), now + this.transitionLength * 1e3]);
       anim.newValue = value;
+
     }
   },
 
@@ -704,12 +704,13 @@ Animator.prototype = {
     for (var k in this.animatables) {
       var v = this.animatables[k];
       if (v.transitions.length) {
+        var accum = v.newValue;
         v.transitions = v.transitions.filter(function(t) {
-          var delta = Math.min(now, t[1]) - t[4];
-          v.value += t[2] * delta / t[3];
-          t[4] = now;
-          return (t[1] < now);
+          if (t[1] >= now) return false;
+          accum += t[0] * (now - t[1]);
+          return true;
         }.bind(this));
+        v.value = accum;
       }
       if (v.value == v.oldValue) continue;
       v.render(v.value);
