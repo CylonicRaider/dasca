@@ -1231,10 +1231,10 @@ ActiveItem.defineType("Crank", {
     var iconContent = $sel(".item-icon span", ret);
     var meterContent = $sel(".item-bar-content", ret);
     this._iconAnimID = this._game.animator.register(function(value) {
-      iconContent.style.width = value * 100 + "%";
+      iconContent.style.transform = "rotate(" + (value * 360) + "deg)";
     });
     this._meterAnimID = this._game.animator.register(function(value) {
-      meterContent.style.transform = "rotate(" + (value * 360) + "deg)";
+      meterContent.style.width = (value * 100) + "%";
     });
     /* Do not modulo-reduce while running to avoid problems with
      * transitions */
