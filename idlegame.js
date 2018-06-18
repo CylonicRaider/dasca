@@ -706,7 +706,7 @@ Animator.prototype = {
       if (v.transitions.length) {
         var accum = v.newValue;
         v.transitions = v.transitions.filter(function(t) {
-          if (t[1] >= now) return false;
+          if (t[1] <= now) return false;
           accum += t[0] * (now - t[1]);
           return true;
         }.bind(this));
