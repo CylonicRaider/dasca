@@ -718,5 +718,13 @@ Animator.prototype = {
     }
   },
 
+  /* Stop animating */
+  stop: function() {
+    if (this._timer != null) {
+      cancelAnimationFrame(this._timer);
+      this._timer = null;
+    }
+  },
+
   constructor: Animator
 };
