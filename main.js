@@ -399,6 +399,7 @@ Game.prototype = {
     this.save();
     this.state.scheduler.running = false;
     this.running = false;
+    this.animator.stop();
   },
 
   /* Update the variables */
