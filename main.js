@@ -101,6 +101,11 @@ function $replaceClass(elem, from, to) {
   }
 }
 
+/* Round a numeric value for display */
+function displayRound(v) {
+  return Math.round(v * 1e4) / 1e4;
+}
+
 /* base64-encode a string with line wrapping */
 function b64encw(s) {
   // "Binary" to "ASCII"?
@@ -1147,8 +1152,7 @@ ActiveItem.defineType("Lighter", {
     if (this._animID == null) this.render();
     var v = this._getVariable("fill");
     if (v.value == 0 && this.active) this.setActive(false);
-    var f = Math.round(v.value / v.max * 10000) / 10000;
-    this._game.animator.set(this._animID, f);
+    this._game.animator.set(this._animID, displayRound(v.value / v.max));
   },
 
   /* Update the action button */
@@ -1253,16 +1257,16 @@ ActiveItem.defineType("Crank", {
 
   /* Update the rotation speed */
   _updateSpeed: function() {
-    var variable = this._getVariable("speed");
+    var v = this._getVariable("speed");
     if (this._meterAnimID == null) this.render();
-    this._game.animator.set(this._meterAnimID, variable.value / variable.max);
+    this._game.animator.set(this._meterAnimID, displayRound(v.value / v.max));
   },
 
   /* Update the display angle */
   _updateRotation: function(now) {
-    var variable = this._getVariable("rotation");
+    var v = this._getVariable("rotation");
     if (this._iconAnimID == null) this.render();
-    this._game.animator.set(this._iconAnimID, variable.value);
+    this._game.animator.set(this._iconAnimID, displayRound(v.value));
   },
 
   /* Start or stop turning the crank */
