@@ -724,6 +724,15 @@ Animator.prototype = {
       cancelAnimationFrame(this._timer);
       this._timer = null;
     }
+    for (var k in this.animatables) {
+      var v = this.animatables[k];
+      if (! v.transitions.length) continue;
+      v.transitions = [];
+      v.value = v.newValue;
+      if (v.value == v.oldValue) continue;
+      v.render(v.value);
+      v.oldValue = v.value;
+    }
   },
 
   constructor: Animator
