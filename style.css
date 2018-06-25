@@ -281,7 +281,7 @@ h1 {
 
 .gauge {
   display: inline-block;
-  width: 5em;
+  width: 10em;
 }
 
 .fade-in {
