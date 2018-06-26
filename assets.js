@@ -1,5 +1,11 @@
 
-var GAUGE_TEXT = 'PD94bWwgdmVyc2lvbj0iMS4wIj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy\
+function parseAsset(text, mimeType) {
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(atob(text), mimeType);
+  return document.importNode(doc.documentElement, true);
+}
+
+var GAUGE_TEXT = "PD94bWwgdmVyc2lvbj0iMS4wIj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy\
   53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hs\
   aW5rIiB2aWV3Qm94PSIwLDAgMTI4LDY0Ij48c3R5bGUgdHlwZT0idGV4dC9jc3MiPi5wb2ludG\
   Vye3RyYW5zaXRpb246dHJhbnNmb3JtIDAuMnMgZWFzZX10ZXh0e2ZvbnQtZmFtaWx5OkFyaWFs\
@@ -21,11 +27,5 @@ var GAUGE_TEXT = 'PD94bWwgdmVyc2lvbj0iMS4wIj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy\
   g9IjUiIHk9IjEiPjwvdGV4dD48cGF0aCBjbGFzcz0icG9pbnRlciIgZD0iTTQsLTEgSC00NiBM\
   LTUwLDAgTC00NiwxIEg0IFoiIGZpbGw9InJlZCIvPjxjaXJjbGUgcj0iMiIgZmlsbD0icmVkIi\
   8+PC9nPjxyZWN0IHg9IjEiIHk9IjEiIHdpZHRoPSIxMjYiIGhlaWdodD0iNjIiIGZpbGw9Im5v\
-  bmUiIHN0cm9rZT0iZ3JheSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+';
-var GAUGE_NODE;
-
-void function() {
-  var parser = new DOMParser();
-  var doc = parser.parseFromString(atob(GAUGE_TEXT), "image/svg+xml");
-  GAUGE_NODE = document.importNode(doc.documentElement, true);
-}();
+  bmUiIHN0cm9rZT0iZ3JheSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+";
+var GAUGE_NODE = parseAsset(GAUGE_TEXT, "image/svg+xml");
