@@ -29,3 +29,11 @@ var GAUGE_TEXT = "PD94bWwgdmVyc2lvbj0iMS4wIj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy\
   8+PC9nPjxyZWN0IHg9IjEiIHk9IjEiIHdpZHRoPSIxMjYiIGhlaWdodD0iNjIiIGZpbGw9Im5v\
   bmUiIHN0cm9rZT0iZ3JheSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+";
 var GAUGE_NODE = parseAsset(GAUGE_TEXT, "image/svg+xml");
+
+var CRANK_TEXT = "PD94bWwgdmVyc2lvbj0iMS4wIj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy\
+  53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xNiwtMTYgMzIsMzIiPjxjaXJjbGUgcj0iMTYi\
+  IGZpbGw9IiM2MDYwNjAiIG9wYWNpdHk9IjAuMiIvPjxjaXJjbGUgcj0iOCIgZmlsbD0iIzYwNj\
+  A2MCIvPjxnIGNsYXNzPSJoYW5kbGUiPjxsaW5lIHkyPSItMTIiIHN0cm9rZT0iIzgwODA4MCIg\
+  c3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PGNpcmNsZSBjeT0iLTEyIiByPSIyIiBmaWxsPSIjYT\
+  BhMGEwIi8+PC9nPjwvc3ZnPg==";
+var CRANK_NODE = parseAsset(CRANK_TEXT, "image/svg+xml");
