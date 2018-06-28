@@ -1213,7 +1213,7 @@ ActiveItem.defineType("Crank", {
   _render: function() {
     var ret = $makeNode("div", "item-card fade-in", [
       ["span", "item-icon item-icon-interactive", {tabIndex: 0}, [
-        ["span", "item-icon-inner img-crank"]
+        CRANK_NODE.cloneNode(true)
       ]],
       ["div", "item-rows", [
         ["b", "item-name", "Crank"],
@@ -1233,7 +1233,7 @@ ActiveItem.defineType("Crank", {
           self._turn(false);
       });
     });
-    var iconContent = $sel(".item-icon span", ret);
+    var iconContent = $sel(".item-icon .handle", ret);
     var meterContent = $sel(".item-bar-content", ret);
     this._iconAnimID = this._game.animator.register(function(value) {
       iconContent.style.transform = "rotate(" + (value % 1 * 360) + "deg)";

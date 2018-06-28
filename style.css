@@ -295,12 +295,3 @@ h1 {
 .no-display {
   display: none;
 }
-
-.img-crank {
-  background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIj8+PHN\
-    2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xNiwtMTY\
-    gMzIsMzIiPjxjaXJjbGUgcj0iMTYiIGZpbGw9IiM2MDYwNjAiIG9wYWNpdHk9IjAuMiIvPjx\
-    jaXJjbGUgcj0iOCIgZmlsbD0iIzYwNjA2MCIvPjxsaW5lIHkyPSItMTIiIHN0cm9rZT0iIzg\
-    wODA4MCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PGNpcmNsZSBjeT0iLTEyIiByPSIyIiB\
-    maWxsPSIjYTBhMGEwIi8+PC9zdmc+");
-}
