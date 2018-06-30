@@ -452,8 +452,8 @@ GameStory.prototype = {
     [null, 0, "story._finishLookAroundStart"]
   ],
 
-  /* Description of engine room */
-  DESCRIPTION_ENGINES: [
+  /* Description of corridor */
+  DESCRIPTION_CORRIDOR: [
     ["The room's walls are covered by semitranslucent panels. The labels " +
       "are hardly decipherable under the weak light.", 8],
     ["Three doors lead out of the room; apart from the one to the bridge, " +
@@ -463,7 +463,7 @@ GameStory.prototype = {
       "stands out.", 8],
     ["There is a small handcrank nearby. It looks stiff, but still " +
       "operational.", 8],
-    [null, 0, "story._finishLookAroundEngines"]
+    [null, 0, "story._finishLookAroundCorridor"]
   ],
 
   /* Show a story fragment */
@@ -518,48 +518,48 @@ GameStory.prototype = {
   /* Finish the first story fragment */
   _finishLookAroundStart: function() {
     this.game.addItem("Button", "pass-door", "Float through door",
-                      "story.goToEngines");
+                      "story.goToCorridor");
     this.game.showItem("start", "pass-door");
   },
 
   /* Move to the next room */
-  goToEngines: function() {
+  goToCorridor: function() {
     this.game.removeItem("pass-door");
     if (this.game.state.items.lighter.active)
       this.game.showMessage("The air flow lets the flame flare to a " +
         "bright yellow.");
     this.game.showMessage("You open the door and float through it.");
-    this.game.addTab("engines", "Engine room");
-    this.game.showItem("engines", "lighter");
-    this.game.addItem("Button", "look-around-engines", "Look around",
-      "story.lookAroundEngines").showWhenActive("engines", "lighter");
-    this.game.showTab("engines");
+    this.game.addTab("corridor", "Corridor");
+    this.game.showItem("corridor", "lighter");
+    this.game.addItem("Button", "look-around-corridor", "Look around",
+      "story.lookAroundCorridor").showWhenActive("corridor", "lighter");
+    this.game.showTab("corridor");
   },
 
   /* Look around there */
-  lookAroundEngines: function() {
-    this.game.removeItem("look-around-engines");
-    this._showStoryFragment(this.DESCRIPTION_ENGINES,
+  lookAroundCorridor: function() {
+    this.game.removeItem("look-around-corridor");
+    this._showStoryFragment(this.DESCRIPTION_CORRIDOR,
                             "state.items.lighter.active");
   },
 
-  /* Finish looking around the engine room */
-  _finishLookAroundEngines: function() {
+  /* Finish looking around the corridor */
+  _finishLookAroundCorridor: function() {
     this.game.makeVariable("energy", 0);
     this.game.addItem("Crank", "crank", 1, 2, 1).attachTo("energy");
-    this.game.showItem("engines", "crank");
-    this.game.addItem("Button", "start-engines", "Start engines",
-                      "story.tryStartEngines");
-    this.game.showItem("engines", "start-engines");
+    this.game.showItem("corridor", "crank");
+    this.game.addItem("Button", "start-reactor", "Start reactor",
+                      "story.tryStartReactor");
+    this.game.showItem("corridor", "start-reactor");
     this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
     this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERGY");
-    this.game.showGauge("engines", "total-energy");
+    this.game.showGauge("corridor", "total-energy");
   },
 
-  /* Attempt starting the engines
+  /* Attempt starting the reactor
    *
    * Will fail if there is not enough energy. */
-  tryStartEngines: function() {
+  tryStartReactor: function() {
     this.game.showMessage("Nothing happens.");
   },
 
