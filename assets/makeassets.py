@@ -2,13 +2,14 @@
 # -*- coding: ascii -*-
 
 import sys, re
+import base64
 
-SPECIAL_RE = re.compile(r'/\*!(.*+)\*/')
+SPECIAL_RE = re.compile(r'/\*!(.+)\*/')
 
 LINE_LENGTH = 78
 
 def parse_input(text):
-    index = 0, 0
+    index = 0
     while 1:
         m = SPECIAL_RE.search(text, index)
         if not m:
