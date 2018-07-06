@@ -3,6 +3,7 @@
 
 import sys, re
 import base64
+import xml.dom.minidom
 
 SPECIAL_RE = re.compile(r'/\*!(.+)\*/')
 
@@ -21,10 +22,33 @@ def parse_input(text):
     if index != len(text):
         yield (None, text[index:])
 
+def minify_svg(text):
+    def traverse(node):
+        for ch in node.childNodes:
+            if ch.nodeType == xml.dom.minidom.Node.ELEMENT_NODE:
+                traverse(ch)
+            elif ch.nodeType == xml.dom.minidom.Node.TEXT_NODE:
+                # TODO: Optimize stylesheets.
+                ch.data = ch.data.strip()
+    # ElementTree does not preserve namespace prefixes and hence generates
+    # rather ugly (and suboptimal) output when serializing again.
+    # minidom, on the other hand, does not emit a newline after the document
+    # type whether it was absent in the source file or not... which is just
+    # what we need.
+    document = xml.dom.minidom.parseString(text)
+    traverse(document)
+    ret = document.toxml('utf-8')
+    document.unlink()
+    return ret
+
 def import_asset(filename):
     with open(filename) as f:
-        data = f.read()
-    encdata = base64.b64encode(data.encode('utf-8')).decode('ascii')
+        rawdata = f.read()
+    if filename.endswith('.svg'):
+        data = minify_svg(rawdata)
+    else:
+        data = rawdata.encode('utf-8')
+    encdata = base64.b64encode(data).decode('ascii')
     index = 0
     while index < len(encdata):
         endindex = index + LINE_LENGTH - 2
