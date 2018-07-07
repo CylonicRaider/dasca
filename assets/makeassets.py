@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: ascii -*-
 
-import sys, re
+import sys, os, re
 import base64
 import xml.dom.minidom
 
@@ -56,21 +56,30 @@ def import_asset(filename):
         yield encdata[index:endindex]
         index = endindex
 
-def process_input(stream):
+def process_input(stream, dirname=''):
     for item in stream:
         if item[0] is None:
             yield item[1]
         elif item[0] == 'include':
             if len(item) != 2:
                 raise SystemExit('Invalid include directive: %r' % (item,))
-            for piece in import_asset(item[1]):
+            for piece in import_asset(os.path.join(dirname, item[1])):
                 yield piece
         else:
             raise SystemExit('Invalid directive: %r' % (item,))
 
 def main():
-    text = sys.stdin.read()
-    for piece in process_input(parse_input(text)):
+    if not 1 <= len(sys.argv) <= 2:
+        raise SystemExit('USAGE: %s [filename]' % sys.argv[0])
+    if len(sys.argv) == 1:
+        dirname = ''
+        text = sys.stdin.read()
+    else:
+        filename = sys.argv[1]
+        dirname = os.path.dirname(filename)
+        with open(filename) as f:
+            text = f.read()
+    for piece in process_input(parse_input(text), dirname):
         sys.stdout.write(piece)
     sys.stdout.flush()
 
