@@ -13,23 +13,38 @@ var GAUGE_TEXT = "\
   OiBBcmlhbCwgc2Fucy1zZXJpZjsgZm9udC1zaXplOiAxMHB4OyBmaWxsOiB3aGl0ZSB9PC9zdHls\
   ZT48ZGVmcz48cGF0aCBkPSJNLTU0LC0xIEwtNTAsMCBMLTU0LDEgWiIgaWQ9InRpY2siLz48L2Rl\
   ZnM+PHJlY3QgaGVpZ2h0PSI2MiIgd2lkdGg9IjEyNiIgeD0iMSIgeT0iMSIvPjxnIHRyYW5zZm9y\
-  bT0idHJhbnNsYXRlKDY0LDU4KSI+PGcgZmlsbD0iZ3JheSI+PHVzZSB4bGluazpocmVmPSIjdGlj\
-  ayIvPjx1c2UgdHJhbnNmb3JtPSJyb3RhdGUoMTgpIiB4bGluazpocmVmPSIjdGljayIvPjx1c2Ug\
-  dHJhbnNmb3JtPSJyb3RhdGUoMzYpIiB4bGluazpocmVmPSIjdGljayIvPjx1c2UgdHJhbnNmb3Jt\
-  PSJyb3RhdGUoNTQpIiB4bGluazpocmVmPSIjdGljayIvPjx1c2UgdHJhbnNmb3JtPSJyb3RhdGUo\
-  NzIpIiB4bGluazpocmVmPSIjdGljayIvPjx1c2UgdHJhbnNmb3JtPSJyb3RhdGUoOTApIiB4bGlu\
-  azpocmVmPSIjdGljayIvPjx1c2UgdHJhbnNmb3JtPSJyb3RhdGUoMTA4KSIgeGxpbms6aHJlZj0i\
-  I3RpY2siLz48dXNlIHRyYW5zZm9ybT0icm90YXRlKDEyNikiIHhsaW5rOmhyZWY9IiN0aWNrIi8+\
-  PHVzZSB0cmFuc2Zvcm09InJvdGF0ZSgxNDQpIiB4bGluazpocmVmPSIjdGljayIvPjx1c2UgdHJh\
-  bnNmb3JtPSJyb3RhdGUoMTYyKSIgeGxpbms6aHJlZj0iI3RpY2siLz48dXNlIHRyYW5zZm9ybT0i\
-  cm90YXRlKDE4MCkiIHhsaW5rOmhyZWY9IiN0aWNrIi8+PC9nPjx0ZXh0IGNsYXNzPSJsYWJlbC0w\
-  IiB0ZXh0LWFuY2hvcj0iZW5kIiB4PSItNTUiIHk9IjEiPjA8L3RleHQ+PHRleHQgY2xhc3M9Imxh\
-  YmVsLTEiIHg9IjU1IiB5PSIxIj4xPC90ZXh0Pjx0ZXh0IGNsYXNzPSJkZXNjIiB4PSI1IiB5PSIx\
-  Ii8+PHBhdGggY2xhc3M9InBvaW50ZXIiIGQ9Ik00LC0xIEgtNDYgTC01MCwwIEwtNDYsMSBINCBa\
-  IiBmaWxsPSJyZWQiLz48Y2lyY2xlIGZpbGw9InJlZCIgcj0iMiIvPjwvZz48cmVjdCBmaWxsPSJu\
-  b25lIiBoZWlnaHQ9IjYyIiBzdHJva2U9ImdyYXkiIHN0cm9rZS13aWR0aD0iMiIgd2lkdGg9IjEy\
-  NiIgeD0iMSIgeT0iMSIvPjwvc3ZnPg==";
+  bT0idHJhbnNsYXRlKDY0LDU4KSI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSI0Ij48cGF0\
+  aCBjbGFzcz0icmFuZ2UtcmVkIiBzdHJva2U9IiM2MDAwMDAiLz48cGF0aCBjbGFzcz0icmFuZ2Ut\
+  eWVsbG93IiBzdHJva2U9IiM0MDQwMDAiLz48cGF0aCBjbGFzcz0icmFuZ2UtZ3JlZW4iIHN0cm9r\
+  ZT0iIzAwNDAwMCIvPjwvZz48ZyBmaWxsPSJncmF5Ij48dXNlIHhsaW5rOmhyZWY9IiN0aWNrIi8+\
+  PHVzZSB0cmFuc2Zvcm09InJvdGF0ZSgxOCkiIHhsaW5rOmhyZWY9IiN0aWNrIi8+PHVzZSB0cmFu\
+  c2Zvcm09InJvdGF0ZSgzNikiIHhsaW5rOmhyZWY9IiN0aWNrIi8+PHVzZSB0cmFuc2Zvcm09InJv\
+  dGF0ZSg1NCkiIHhsaW5rOmhyZWY9IiN0aWNrIi8+PHVzZSB0cmFuc2Zvcm09InJvdGF0ZSg3Miki\
+  IHhsaW5rOmhyZWY9IiN0aWNrIi8+PHVzZSB0cmFuc2Zvcm09InJvdGF0ZSg5MCkiIHhsaW5rOmhy\
+  ZWY9IiN0aWNrIi8+PHVzZSB0cmFuc2Zvcm09InJvdGF0ZSgxMDgpIiB4bGluazpocmVmPSIjdGlj\
+  ayIvPjx1c2UgdHJhbnNmb3JtPSJyb3RhdGUoMTI2KSIgeGxpbms6aHJlZj0iI3RpY2siLz48dXNl\
+  IHRyYW5zZm9ybT0icm90YXRlKDE0NCkiIHhsaW5rOmhyZWY9IiN0aWNrIi8+PHVzZSB0cmFuc2Zv\
+  cm09InJvdGF0ZSgxNjIpIiB4bGluazpocmVmPSIjdGljayIvPjx1c2UgdHJhbnNmb3JtPSJyb3Rh\
+  dGUoMTgwKSIgeGxpbms6aHJlZj0iI3RpY2siLz48L2c+PHRleHQgY2xhc3M9ImxhYmVsLTAiIHRl\
+  eHQtYW5jaG9yPSJlbmQiIHg9Ii01NSIgeT0iMSI+MDwvdGV4dD48dGV4dCBjbGFzcz0ibGFiZWwt\
+  MSIgeD0iNTUiIHk9IjEiPjE8L3RleHQ+PHRleHQgY2xhc3M9ImRlc2MiIHg9IjUiIHk9IjEiLz48\
+  cGF0aCBjbGFzcz0icG9pbnRlciIgZD0iTTQsLTEgSC00NiBMLTUwLDAgTC00NiwxIEg0IFoiIGZp\
+  bGw9InJlZCIvPjxjaXJjbGUgZmlsbD0icmVkIiByPSIyIi8+PC9nPjxyZWN0IGZpbGw9Im5vbmUi\
+  IGhlaWdodD0iNjIiIHN0cm9rZT0iZ3JheSIgc3Ryb2tlLXdpZHRoPSIyIiB3aWR0aD0iMTI2IiB4\
+  PSIxIiB5PSIxIi8+PC9zdmc+";
 var GAUGE_NODE = parseAsset(GAUGE_TEXT, "image/svg+xml");
+
+function setGaugeDescription(node, text) {
+  node.querySelector(".desc").textContent = text;
+}
+function setGaugeRange(node, type, fromval, toval) {
+  var R = 52;
+  var path = node.querySelector(".range-" + type);
+  var fa = fromval * Math.PI, ta = toval * Math.PI;
+  path.setAttribute("d",
+    "M " + (R * -Math.cos(fa)) + "," + (R * -Math.sin(fa)) + " " +
+    "A 52,52 0 0,1 " + (R * -Math.cos(ta)) + "," + (R * -Math.sin(ta)));
+}
 
 var CRANK_TEXT = "\
   PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48c3ZnIHZpZXdCb3g9Ii0xNiwt\

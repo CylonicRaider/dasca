@@ -552,7 +552,8 @@ GameStory.prototype = {
                       "story.tryStartReactor");
     this.game.showItem("corridor", "start-reactor");
     this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
-    this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERGY");
+    this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERGY",
+                      {red: [0, 0.1], yellow: [0.1, 0.5], green: [0.5, 1]});
     this.game.showGauge("corridor", "total-energy");
   },
 
@@ -1289,10 +1290,11 @@ ActiveItem.defineType("Crank", {
  * Currently, the Variable must have a minimum of zero. */
 Item.defineType("Gauge", {
   /* Initialize instance */
-  __init__: function(varname, max, description) {
+  __init__: function(varname, max, description, ranges) {
     this.varname = varname;
     this.max = max;
     this.description = description;
+    this.ranges = ranges;
     this._game.getVariable(varname).addLateHandler(
       this._makeAction("_updatePointer"));
   },
@@ -1302,7 +1304,12 @@ Item.defineType("Gauge", {
     var ret = $makeNode("span", "gauge fade-in", [
       GAUGE_NODE.cloneNode(true)
     ]);
-    $sel(".desc", ret).textContent = this.description;
+    setGaugeDescription(ret, this.description);
+    for (var k in this.ranges) {
+      if (! this.ranges.hasOwnProperty(k)) continue;
+      var r = this.ranges[k];
+      setGaugeRange(ret, k, r[0], r[1]);
+    }
     this._pointer = $sel(".pointer", ret);
     return ret;
   },
