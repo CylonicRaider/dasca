@@ -646,12 +646,12 @@ FlagSet.prototype = {
 
 /* Construct a new instance
  *
- * transitionLength is the length (in seconds) that transitioning to a new
+ * transitionDuration is the length (in seconds) that transitioning to a new
  * value should take; the value can be reconfigured after instantiation via
  * the same-named property. */
-function Animator(transitionLength) {
+function Animator(transitionDuration) {
   this.animatables = {};
-  this.transitionLength = transitionLength;
+  this.transitionDuration = transitionDuration;
   this._timer = null;
   this._nextID = 1;
 }
@@ -677,19 +677,23 @@ Animator.prototype = {
 
   /* Set the value of the given animatable to value
    *
-   * This will schedule a transition as appropriate. */
-  set: function(id, value) {
+   * duration, if not null, overrides the default transition duration. This
+   * will schedule a transition as appropriate. */
+  set: function(id, value, duration) {
+    if (duration == null) duration = this.transitionDuration;
     var anim = this.animatables[id];
-    if (this.transitionLength == 0 || anim.value == null) {
+    if (duration == 0 || anim.value == null) {
       anim.value = value;
       anim.newValue = value;
     } else if (value != anim.newValue) {
-      // [slope, target time]
+      // [target time, slope]
+      duration *= 1e3;
       var now = performance.now();
-      anim.transitions.push([(value - anim.newValue) /
-        (this.transitionLength * 1e3), now + this.transitionLength * 1e3]);
+      anim.transitions.push([
+        now + duration,
+        (value - anim.newValue) / duration
+      ]);
       anim.newValue = value;
-
     }
   },
 
@@ -706,8 +710,9 @@ Animator.prototype = {
       if (v.transitions.length) {
         var accum = v.newValue;
         v.transitions = v.transitions.filter(function(t) {
-          if (t[1] <= now) return false;
-          accum += t[0] * (now - t[1]);
+          var x = now - t[0];
+          if (x >= 0) return false;
+          accum += t[1] * x;
           return true;
         }.bind(this));
         v.value = accum;
