@@ -3,6 +3,8 @@
      xmlns:xlink="http://www.w3.org/1999/xlink">
   <style type="text/css">
 text { font-family: Arial, sans-serif; font-size: 10px; fill: white }
+.scale.clickable:hover { text-decoration: underline; cursor: pointer }
+.scale.clickable:active { fill: #c0c0c0 }
   </style>
   <defs>
     <path id="tick" d="M-54,-1 L-50,0 L-54,1 Z"/>
@@ -28,8 +30,9 @@ text { font-family: Arial, sans-serif; font-size: 10px; fill: white }
       <use xlink:href="#tick" transform="rotate(180)"/>
     </g>
     <text class="label-0" x="-55" y="1" text-anchor="end">0</text>
+    <text class="scale" x="-5" y="-4" text-anchor="end"></text>
+    <text class="desc" x="5" y="-4"></text>
     <text class="label-1" x="55" y="1">1</text>
-    <text class="desc" x="5" y="1"></text>
     <path class="pointer" d="M4,-1 H-46 L-50,0 L-46,1 H4 Z" fill="red"/>
     <circle r="2" fill="red"/>
   </g>
