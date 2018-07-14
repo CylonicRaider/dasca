@@ -1297,6 +1297,9 @@ Item.defineType("Gauge", {
     this.ranges = ranges;
     this._game.getVariable(varname).addLateHandler(
       this._makeAction("_updatePointer"));
+    this._pointer = null;
+    this._descNode = null;
+    this._rangeNode = null;
   },
 
   /* Render the Item into a DOM node */
@@ -1304,23 +1307,44 @@ Item.defineType("Gauge", {
     var ret = $makeNode("span", "gauge fade-in", [
       GAUGE_NODE.cloneNode(true)
     ]);
-    setGaugeDescription(ret, this.description);
+    this._pointer = $sel(".pointer", ret);
+    this._descNode = $sel(".desc", ret);
+    this._rangeNode = $sel(".ranges", ret);
+    var v = this._game.getVariable(this.varname);
+    this._updatePointer(v.value, v);
+    this.setDescription(this.description);
     for (var k in this.ranges) {
       if (! this.ranges.hasOwnProperty(k)) continue;
       var r = this.ranges[k];
-      setGaugeRange(ret, k, r[0], r[1]);
+      this.setRange(k, r[0], r[1]);
     }
-    this._pointer = $sel(".pointer", ret);
     return ret;
   },
 
   /* Update the pointer of the gauge */
   _updatePointer: function(value, variable) {
-    if (this._pointer == null)
-      this.render();
+    if (this._pointer == null) this.render();
     var cap = (this.max == null) ? variable.max : this.max;
     if (value > cap) value = cap;
     this._pointer.style.transform = "rotate(" + (value / cap * 180) + "deg)";
+  },
+
+  /* Change the description of this gauge */
+  setDescription: function(desc) {
+    this.description = desc;
+    if (this._descNode == null) this.render();
+    this._descNode.textContent = desc;
+  },
+
+  /* Configure a range on this gauge */
+  setRange: function(type, fromval, toval) {
+    var R = 52;
+    if (this._rangeNode == null) this.render();
+    var path = $sel(".range-" + type, this._rangeNode);
+    var fa = fromval * Math.PI, ta = toval * Math.PI;
+    path.setAttribute("d",
+      "M " + (R * -Math.cos(fa)) + "," + (R * -Math.sin(fa)) + " " +
+      "A 52,52 0 0,1 " + (R * -Math.cos(ta)) + "," + (R * -Math.sin(ta)));
   }
 });
 
