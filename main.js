@@ -1290,16 +1290,19 @@ ActiveItem.defineType("Crank", {
  * Currently, the Variable must have a minimum of zero. */
 Item.defineType("Gauge", {
   /* Initialize instance */
-  __init__: function(varname, max, description, ranges) {
+  __init__: function(varname, max, description, ranges, scales) {
     this.varname = varname;
     this.max = max;
     this.description = description;
     this.ranges = ranges;
+    this.scales = scales;
+    this._currentScale = null;
     this._game.getVariable(varname).addLateHandler(
       this._makeAction("_updatePointer"));
     this._pointer = null;
     this._descNode = null;
     this._rangeNode = null;
+    this._scaleNode = null;
   },
 
   /* Render the Item into a DOM node */
@@ -1310,22 +1313,32 @@ Item.defineType("Gauge", {
     this._pointer = $sel(".pointer", ret);
     this._descNode = $sel(".desc", ret);
     this._rangeNode = $sel(".ranges", ret);
+    this._scaleNode = $sel(".scale", ret);
+    $listen(this._scaleNode, "click", function(evt) {
+      this.selectNextScale();
+    }.bind(this));
     var v = this._game.getVariable(this.varname);
-    this._updatePointer(v.value, v);
+    this._updatePointer();
     this.setDescription(this.description);
     for (var k in this.ranges) {
       if (! this.ranges.hasOwnProperty(k)) continue;
       var r = this.ranges[k];
       this.setRange(k, r[0], r[1]);
     }
+    this.setScales(this.scales);
     return ret;
   },
 
   /* Update the pointer of the gauge */
   _updatePointer: function(value, variable) {
-    if (this._pointer == null) this.render();
+    if (variable == null) {
+      variable = this._game.getVariable(this.varname);
+      value = variable.value;
+    }
     var cap = (this.max == null) ? variable.max : this.max;
+    value /= this._currentScale;
     if (value > cap) value = cap;
+    if (this._pointer == null) this.render();
     this._pointer.style.transform = "rotate(" + (value / cap * 180) + "deg)";
   },
 
@@ -1345,6 +1358,36 @@ Item.defineType("Gauge", {
     path.setAttribute("d",
       "M " + (R * -Math.cos(fa)) + "," + (R * -Math.sin(fa)) + " " +
       "A 52,52 0 0,1 " + (R * -Math.cos(ta)) + "," + (R * -Math.sin(ta)));
+  },
+
+  /* Set the possible values the gauge can be scaled with */
+  setScales: function(values) {
+    if (values == null) values = [];
+    this.scales = values;
+    if (this._scaleNode == null) {
+      this.render();
+    }
+    if (! values.length) {
+      this._currentScale = 1;
+      this._scaleNode.textContent = "";
+      this._scaleNode.classList.remove("clickable");
+    } else {
+      this._currentScale = values[0];
+      this._scaleNode.textContent = "\u00d7 " + values[0];
+      this._scaleNode.classList.add("clickable");
+    }
+    this._updatePointer();
+  },
+
+  /* Select the next scale in the list */
+  selectNextScale: function() {
+    if (! this.scales.length) return;
+    if (this._scaleNode == null) this.render();
+    var idx = this.scales.indexOf(this._currentScale);
+    idx = (idx + 1) % this.scales.length;
+    this._currentScale = this.scales[idx];
+    this._scaleNode.textContent = "\u00d7 " + this._currentScale;
+    this._updatePointer();
   }
 });
 
