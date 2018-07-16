@@ -553,7 +553,8 @@ GameStory.prototype = {
     this.game.showItem("corridor", "start-reactor");
     this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
     this.game.addItem("Gauge", "starter-energy", "energy", 100, "STRT",
-                      {red: [0, 0.1], yellow: [0.1, 0.5], green: [0.5, 1]});
+      {red: [0, 0.1], yellow: [0.1, 0.5], green: [0.5, 1]},
+      [1, 10, 100]);
     this.game.showGauge("corridor", "starter-energy");
   },
 
