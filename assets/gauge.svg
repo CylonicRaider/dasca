@@ -4,7 +4,7 @@
   <style type="text/css">
 text { font-family: Arial, sans-serif; font-size: 10px; fill: white }
 .scale.clickable:hover { text-decoration: underline; cursor: pointer }
-.scale.clickable:active { fill: #c0c0c0 }
+.scale.clickable:active { fill: #808080 }
   </style>
   <defs>
     <path id="tick" d="M-54,-1 L-50,0 L-54,1 Z"/>
