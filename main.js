@@ -1321,10 +1321,12 @@ Item.defineType("Gauge", {
     var v = this._game.getVariable(this.varname);
     this._updatePointer();
     this.setDescription(this.description);
-    for (var k in this.ranges) {
-      if (! this.ranges.hasOwnProperty(k)) continue;
-      var r = this.ranges[k];
-      this.setRange(k, r[0], r[1]);
+    if (this.ranges) {
+      for (var k in this.ranges) {
+        if (! this.ranges.hasOwnProperty(k)) continue;
+        var r = this.ranges[k];
+        this.setRange(k, r[0], r[1]);
+      }
     }
     this.setScales(this.scales);
     return ret;
@@ -1347,7 +1349,7 @@ Item.defineType("Gauge", {
   setDescription: function(desc) {
     this.description = desc;
     if (this._descNode == null) this.render();
-    this._descNode.textContent = desc;
+    this._descNode.textContent = desc || '';
   },
 
   /* Configure a range on this gauge */
