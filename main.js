@@ -553,7 +553,7 @@ GameStory.prototype = {
     this.game.showItem("corridor", "start-reactor");
     this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
     this.game.addItem("Gauge", "starter-energy", "energy", 100, "STRT",
-      {red: [0, 0.1], yellow: [0.1, 0.5], green: [0.5, 1]},
+      {red: [0, 0.1], yellow: [0.1, 0.5], green: [0.5, 100]},
       [1, 10, 100]);
     this.game.showGauge("corridor", "starter-energy");
   },
@@ -1321,13 +1321,7 @@ Item.defineType("Gauge", {
     var v = this._game.getVariable(this.varname);
     this._updatePointer();
     this.setDescription(this.description);
-    if (this.ranges) {
-      for (var k in this.ranges) {
-        if (! this.ranges.hasOwnProperty(k)) continue;
-        var r = this.ranges[k];
-        this.setRange(k, r[0], r[1]);
-      }
-    }
+    this.setRanges(this.ranges);
     this.setScales(this.scales);
     return ret;
   },
@@ -1352,12 +1346,36 @@ Item.defineType("Gauge", {
     this._descNode.textContent = desc || '';
   },
 
-  /* Configure a range on this gauge */
+  /* Install the given range list into this instance
+   *
+   * ranges is an object whose keys are range names (one of "red", "yellow",
+   * "green") and whose values are arrays of length two where the first value
+   * and second value define the beginning and end of the range, respectively,
+   * where the beginning must be no greater than the end. */
+  setRanges: function(ranges) {
+    this.ranges = ranges;
+    if (this.ranges) {
+      for (var k in this.ranges) {
+        if (! this.ranges.hasOwnProperty(k)) continue;
+        var r = this.ranges[k];
+        this._setRange(k, r[0], r[1]);
+      }
+    }
+  },
+
+  /* Configure a range on this gauge and update its stored range list */
   setRange: function(type, fromval, toval) {
+    this.ranges[type] = [fromval, toval];
+    this._setRange(type, fromval, toval);
+  },
+
+  /* Configure a range on this gauge */
+  _setRange: function(type, fromval, toval) {
     var R = 52;
     if (this._rangeNode == null) this.render();
     var path = $sel(".range-" + type, this._rangeNode);
-    var fa = fromval * Math.PI, ta = toval * Math.PI;
+    var fa = Math.min(fromval / this._currentScale, 1) * Math.PI;
+    var ta = Math.min(toval / this._currentScale, 1) * Math.PI;
     path.setAttribute("d",
       "M " + (R * -Math.cos(fa)) + "," + (R * -Math.sin(fa)) + " " +
       "A 52,52 0 0,1 " + (R * -Math.cos(ta)) + "," + (R * -Math.sin(ta)));
@@ -1380,6 +1398,7 @@ Item.defineType("Gauge", {
       this._scaleNode.classList.add("clickable");
     }
     this._updatePointer();
+    this.setRanges(this.ranges);
   },
 
   /* Select the next scale in the list */
@@ -1391,6 +1410,7 @@ Item.defineType("Gauge", {
     this._currentScale = this.scales[idx];
     this._scaleNode.textContent = "\u00d7 " + this._currentScale;
     this._updatePointer();
+    this.setRanges(this.ranges);
   }
 });
 
