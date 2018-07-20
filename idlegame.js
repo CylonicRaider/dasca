@@ -648,10 +648,15 @@ FlagSet.prototype = {
  *
  * transitionDuration is the length (in seconds) that transitioning to a new
  * value should take; the value can be reconfigured after instantiation via
- * the same-named property. */
-function Animator(transitionDuration) {
-  this.animatables = {};
+ * the same-named property. easingMode is one of "linear", "quadratic",
+ * "cubic", and selects a polynomial to use for interpolation during
+ * transitions. Both transitionDuration and easingMode can be overridden for
+ * a particular transition in the set() method. */
+function Animator(transitionDuration, easingMode) {
+  if (easingMode == null) easingMode = 'linear';
   this.transitionDuration = transitionDuration;
+  this.easingMode = easingMode;
+  this.animatables = {};
   this._timer = null;
   this._nextID = 1;
 }
@@ -679,20 +684,33 @@ Animator.prototype = {
    *
    * duration, if not null, overrides the default transition duration. This
    * will schedule a transition as appropriate. */
-  set: function(id, value, duration) {
+  set: function(id, value, duration, easing) {
     if (duration == null) duration = this.transitionDuration;
+    if (easing == null) easing = this.easingMode;
     var anim = this.animatables[id];
     if (duration == 0 || anim.value == null) {
       anim.value = value;
       anim.newValue = value;
     } else if (value != anim.newValue) {
-      // [target time, slope]
+      // [target time, linear coefficient, quadratic coefficient,
+      // cubic coefficient]
       duration *= 1e3;
-      var now = performance.now();
-      anim.transitions.push([
-        now + duration,
-        (value - anim.newValue) / duration
-      ]);
+      var now = performance.now(), diff = value - anim.newValue;
+      var linear = 0, quadratic = 0, cubic = 0;
+      switch (easing) {
+        case 'quadratic':
+          quadratic = diff / (duration * duration);
+          break;
+        case 'cubic':
+          var sqd = duration * duration;
+          cubic = - 2 * diff / (sqd * duration);
+          quadratic = - 3 * diff / sqd;
+          break;
+        default:
+          linear = diff / duration;
+          break;
+      }
+      anim.transitions.push([now + duration, linear, quadratic, cubic]);
       anim.newValue = value;
     }
   },
@@ -712,7 +730,7 @@ Animator.prototype = {
         v.transitions = v.transitions.filter(function(t) {
           var x = now - t[0];
           if (x >= 0) return false;
-          accum += t[1] * x;
+          accum += ((t[3] * x + t[2]) * x + t[1]) * x;
           return true;
         }.bind(this));
         v.value = accum;
