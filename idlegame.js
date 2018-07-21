@@ -699,7 +699,7 @@ Animator.prototype = {
       var linear = 0, quadratic = 0, cubic = 0;
       switch (easing) {
         case 'quadratic':
-          quadratic = diff / (duration * duration);
+          quadratic = -diff / (duration * duration);
           break;
         case 'cubic':
           var sqd = duration * duration;

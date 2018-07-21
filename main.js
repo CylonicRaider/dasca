@@ -1304,6 +1304,7 @@ Item.defineType("Gauge", {
     this._descNode = null;
     this._rangeNode = null;
     this._scaleNode = null;
+    this._pointerAnim = null;
   },
 
   /* Render the Item into a DOM node */
@@ -1315,6 +1316,9 @@ Item.defineType("Gauge", {
     this._descNode = $sel(".desc", ret);
     this._rangeNode = $sel(".ranges", ret);
     this._scaleNode = $sel(".scale", ret);
+    this._pointerAnim = this._game.animator.register(function(value) {
+      this._pointer.style.transform = "rotate(" + (value * 180) + "deg)";
+    }.bind(this));
     $listen(this._scaleNode, "click", function(evt) {
       this.selectNextScale();
     }.bind(this));
@@ -1335,8 +1339,9 @@ Item.defineType("Gauge", {
     var cap = (this.max == null) ? variable.max : this.max;
     value /= this._currentScale;
     if (value > cap) value = cap;
-    if (this._pointer == null) this.render();
-    this._pointer.style.transform = "rotate(" + (value / cap * 180) + "deg)";
+    if (this._pointerAnim == null) this.render();
+    this._game.animator.set(this._pointerAnim, displayRound(value / cap),
+      this._game.animator.transitionDuration, 'cubic');
   },
 
   /* Change the description of this gauge */
