@@ -11,11 +11,6 @@ text { font-family: Arial, sans-serif; font-size: 10px; fill: white }
   </defs>
   <rect x="1" y="1" width="126" height="62"/>
   <g transform="translate(64,58)">
-    <g class="ranges" fill="none" stroke-width="4">
-      <path class="range-red" stroke="#600000"/>
-      <path class="range-yellow" stroke="#404000"/>
-      <path class="range-green" stroke="#004000"/>
-    </g>
     <g fill="gray">
       <use xlink:href="#tick"/>
       <use xlink:href="#tick" transform="rotate(18)"/>
