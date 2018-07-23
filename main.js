@@ -552,9 +552,9 @@ GameStory.prototype = {
                       "story.tryStartReactor");
     this.game.showItem("corridor", "start-reactor");
     this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
-    this.game.addItem("Gauge", "starter-energy", "energy", 100, "STRT",
+    this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERGY",
                       [1, 10, 100]);
-    this.game.showGauge("corridor", "starter-energy");
+    this.game.showGauge("corridor", "total-energy");
   },
 
   /* Attempt starting the reactor
