@@ -553,7 +553,7 @@ GameStory.prototype = {
     this.game.showItem("corridor", "start-reactor");
     this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
     this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERGY",
-                      [1, 10, 100]);
+                      [1, 10, 100], true);
     this.game.showGauge("corridor", "total-energy");
   },
 
@@ -1290,14 +1290,15 @@ ActiveItem.defineType("Crank", {
  * Currently, the Variable must have a minimum of zero. */
 Item.defineType("Gauge", {
   /* Initialize instance */
-  __init__: function(varname, max, description, scales) {
+  __init__: function(varname, max, description, scales, autoScale) {
     this.varname = varname;
     this.max = max;
     this.description = description;
     this.scales = scales;
-    this._currentScale = null;
+    this.autoScale = autoScale;
     this._game.getVariable(varname).addLateHandler(
       this._makeAction("_updatePointer"));
+    this._currentScale = null;
     this._pointer = null;
     this._descNode = null;
     this._scaleNode = null;
@@ -1332,6 +1333,18 @@ Item.defineType("Gauge", {
       value = variable.value;
     }
     var cap = (this.max == null) ? variable.max : this.max;
+    if (this.autoScale && this.scales.length) {
+      var idx = this.scales.indexOf(this.currentScale);
+      if (idx == -1) idx = 0;
+      var midx = this.scales.length - 1;
+      while (idx < midx && value / this.scales[idx] > cap) idx++;
+      while (idx > 0 && value / this.scales[idx - 1] < cap) idx--;
+      if (this.scales[idx] != this._currentScale) {
+        this.setScale(this.scales[idx]);
+        // setScale calls _updatePointer recursively.
+        return;
+      }
+    }
     value /= this._currentScale;
     if (value > cap) value = cap;
     if (this._pointerAnim == null) this.render();
@@ -1350,17 +1363,30 @@ Item.defineType("Gauge", {
   setScales: function(values) {
     if (values == null) values = [];
     this.scales = values;
+    if (! values.length) {
+      this.setScale(null);
+    } else {
+      this.setScale(values[0]);
+    }
+    this._updatePointer();
+  },
+
+  /* Let the gauge have the given scale as its scale */
+  setScale: function(scale) {
     if (this._scaleNode == null) {
       this.render();
     }
-    if (! values.length) {
+    if (scale == null) {
       this._currentScale = 1;
       this._scaleNode.textContent = "";
-      this._scaleNode.classList.remove("clickable");
     } else {
-      this._currentScale = values[0];
-      this._scaleNode.textContent = "\u00d7 " + values[0];
+      this._currentScale = scale;
+      this._scaleNode.textContent = "\u00d7 " + scale;
+    }
+    if (scale != null && ! this.autoScale) {
       this._scaleNode.classList.add("clickable");
+    } else {
+      this._scaleNode.classList.remove("clickable");
     }
     this._updatePointer();
   },
