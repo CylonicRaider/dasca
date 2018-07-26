@@ -662,7 +662,7 @@ GameUI.prototype = {
       this.root = $makeNode("div", {id: "game-content"}, [
         ["div", "pane row-all", {id: "game-layers"}, [
           ["div", "layer selected row", [
-            ["div", "col col-3of10 inset", [
+            ["div", "col col-3of10 scroll-inset", [
               ["div", {id: "messagebar", lang: "en-US"}]
             ]],
             ["div", "col col-all", [

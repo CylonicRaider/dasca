@@ -171,6 +171,12 @@ h1 {
 #mainscreen .inset {
   padding: 0.5em;
 }
+#mainscreen .scroll-inset {
+  padding: 0.5em 0.25em 0.5em 0.5em;
+}
+#mainscreen .scroll-inset > * {
+  padding-right: 0.25em;
+}
 #mainscreen .row-small.inset {
   padding: 0.6666666666666666em;
 }
