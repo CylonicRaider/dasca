@@ -69,7 +69,7 @@ h1 {
   border: 1px solid #808080;
   margin: 0.25em;
   box-sizing: border-box;
-  color: inherit;
+  color: white;
   font: inherit;
   background: none;
   outline: none;
@@ -89,10 +89,11 @@ h1 {
   text-decoration: underline;
 }
 .btn:active, .btn:focus {
-  outline: 1px dotted #808080;
+  outline: 1px dotted #c0c0c0;
 }
 .btn:active {
-  outline-color: #c0c0c0;
+  color: #808080;
+  outline-color: #808080;
 }
 .btn-wide {
   display: block;
