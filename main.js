@@ -764,7 +764,7 @@ GameUI.prototype = {
     if (! options) options = {};
     this._tabButtons[name] = $makeNode("button",
       "btn btn-small fade-in", {id: "tabbtn-" + name}, [dispname]);
-    this._tabButtons[name].addEventListener("click", function() {
+    $listen(this._tabButtons[name], "click", function() {
       this.game.showTab(name);
     }.bind(this));
     var tabbar = $idx("tabbar", this.root);
@@ -1076,7 +1076,7 @@ Item.defineType("Button", {
   _render: function() {
     var ret = $makeNode("button", "btn", [this.text]);
     if (this.classes) ret.className += " " + this.classes;
-    ret.addEventListener("click", this.use.bind(this));
+    $listen(ret, "click", this.use.bind(this));
     return ret;
   },
 
@@ -1226,12 +1226,12 @@ ActiveItem.defineType("Crank", {
     var self = this;
     var icon = $sel(".item-icon", ret), button = $sel(".item-use", ret);
     [icon, button].forEach(function(node) {
-      node.addEventListener("mousedown", self._turn.bind(self, true));
-      node.addEventListener("mouseup", self._turn.bind(self, false));
-      node.addEventListener("mouseout", function(evt) {
+      $listen(node, "mousedown", self._turn.bind(self, true));
+      $listen(node, "mouseup", self._turn.bind(self, false));
+      $listen(node, "mouseout", function(evt) {
         if (evt.target == node) self._turn(false);
       });
-      node.addEventListener("blur", function(evt) {
+      $listen(node, "blur", function(evt) {
         if (evt.relatedTarget != icon && evt.relatedTarget != button)
           self._turn(false);
       });
