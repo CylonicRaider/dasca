@@ -94,10 +94,10 @@ function $makeNode(tag, className, attrs, children) {
 }
 
 /* Replace a CSS class with another */
-function $replaceClass(elem, from, to) {
-  if (elem.classList.contains(from)) {
-    elem.classList.remove(from);
-    elem.classList.add(to);
+function $replaceClass(elem, fromCls, toCls) {
+  if (elem.classList.contains(fromCls)) {
+    elem.classList.remove(fromCls);
+    elem.classList.add(toCls);
   }
 }
 
@@ -782,16 +782,18 @@ GameUI.prototype = {
 
   /* Show a UI tab */
   _showTab: function(name, hidden) {
+    function suppressAnimation(node) {
+      console.log("Suppressing animation on", node);
+      $replaceClass(node, "fade-in", "fade-in-suppressed");
+    }
     var tabbtn = this._tabButtons[name];
     var tabbar = $idx("tabbar", this.root);
     if (! hidden && ! tabbar.contains(tabbtn)) {
       tabbar.appendChild(tabbtn);
       this._sortTabs();
     }
-    for (var node = $idx("tab-" + name, this.root).firstElementChild;
-         node; node = node.nextElementSibling) {
-      $replaceClass(node, "fade-in", "fade-in-suppressed");
-    }
+    Array.prototype.forEach.call($selAll("#tab-" + name + " > * > *",
+                                         this.root), suppressAnimation);
     showNode(this._tabs[name]);
   },
 
