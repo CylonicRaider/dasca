@@ -930,7 +930,7 @@ Item.prototype = {
   },
 
   /* Retrieve a Variable on this item */
-  _getVariable: function(name) {
+  getVariable: function(name) {
     if (! (name in this._vars)) {
       this._vars[name] = this._game.getVariable(this.name + "/" + name);
     }
@@ -1153,7 +1153,7 @@ ActiveItem.defineType("Lighter", {
   _updateMeter: function() {
     /* Update fill meter */
     if (this._animID == null) this.render();
-    var v = this._getVariable("fill");
+    var v = this.getVariable("fill");
     if (v.value == 0 && this.active) this.setActive(false);
     this._game.animator.set(this._animID, displayRound(v.value / v.max));
   },
@@ -1168,7 +1168,7 @@ ActiveItem.defineType("Lighter", {
 
   /* Set the burning state */
   setActive: function(state) {
-    var v = this._getVariable("fill");
+    var v = this.getVariable("fill");
     if (state && v.value < 1e-6) {
       this._game.showMessage("The lighter is burnt out.");
       return false;
@@ -1248,7 +1248,7 @@ ActiveItem.defineType("Crank", {
     });
     /* Do not modulo-reduce while running to avoid problems with
      * transitions */
-    this._getVariable("rotation").value %= 1;
+    this.getVariable("rotation").value %= 1;
     this._updateSpeed();
     this._updateRotation();
     return ret;
@@ -1262,14 +1262,14 @@ ActiveItem.defineType("Crank", {
 
   /* Update the rotation speed */
   _updateSpeed: function() {
-    var v = this._getVariable("speed");
+    var v = this.getVariable("speed");
     if (this._meterAnimID == null) this.render();
     this._game.animator.set(this._meterAnimID, displayRound(v.value / v.max));
   },
 
   /* Update the display angle */
   _updateRotation: function(now) {
-    var v = this._getVariable("rotation");
+    var v = this.getVariable("rotation");
     if (this._iconAnimID == null) this.render();
     this._game.animator.set(this._iconAnimID, displayRound(v.value));
   },
