@@ -672,12 +672,18 @@ Animator.prototype = {
    * numeric or null; in the latter case, no transition is performed when
    * the value is set first.
    *
-   * Returns the ID of the animatable. */
+   * Returns a function that wraps the set() method by passing it the ID of
+   * the newly-created Animatable; the same ID is exposed as the "id" property
+   * of the return value. */
   register: function(render, value) {
     var id = this._nextID++;
     this.animatables[id] = {value: value, newValue: value, oldValue: null,
       render: render, transitions: []};
-    return id;
+    var ret = function(value, duration, easing) {
+      this.set(id, value, duration, easing);
+    }.bind(this);
+    ret.id = id;
+    return ret;
   },
 
   /* Set the value of the given animatable to value

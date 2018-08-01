@@ -1121,7 +1121,7 @@ ActiveItem.defineType("Lighter", {
     var v = this._makeVariable("fill", fill, 0, capacity);
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
-    this._animID = null;
+    this._anim = null;
   },
 
   /* Deplete the lighter's fuel */
@@ -1139,7 +1139,7 @@ ActiveItem.defineType("Lighter", {
     $listen($sel(".item-use", ret), "click", this.use.bind(this));
     var meterNode = $sel(".item-bar-content", ret);
     this._button = $sel(".item-use", ret);
-    this._animID = this._game.animator.register(function(value) {
+    this._anim = this._game.animator.register(function(value) {
       value = value * 100 + "%";
       if (meterNode.style.width != value)
         meterNode.style.width = value;
@@ -1152,10 +1152,10 @@ ActiveItem.defineType("Lighter", {
   /* Update the fill meter */
   _updateMeter: function() {
     /* Update fill meter */
-    if (this._animID == null) this.render();
+    if (this._anim == null) this.render();
     var v = this.getVariable("fill");
     if (v.value == 0 && this.active) this.setActive(false);
-    this._game.animator.set(this._animID, displayRound(v.value / v.max));
+    this._anim(displayRound(v.value / v.max));
   },
 
   /* Update the action button */
@@ -1208,8 +1208,8 @@ ActiveItem.defineType("Crank", {
     this.speedincr = speedincr;
     this.speeddecr = speeddecr;
     this._turning = false;
-    this._iconAnimID = null;
-    this._meterAnimID = null;
+    this._iconAnim = null;
+    this._meterAnim = null;
   },
 
   /* Render the item into a UI node */
@@ -1240,10 +1240,10 @@ ActiveItem.defineType("Crank", {
     });
     var iconContent = $sel(".item-icon .handle", ret);
     var meterContent = $sel(".item-bar-content", ret);
-    this._iconAnimID = this._game.animator.register(function(value) {
+    this._iconAnim = this._game.animator.register(function(value) {
       iconContent.style.transform = "rotate(" + (value % 1 * 360) + "deg)";
     });
-    this._meterAnimID = this._game.animator.register(function(value) {
+    this._meterAnim = this._game.animator.register(function(value) {
       meterContent.style.width = (value * 100) + "%";
     });
     /* Do not modulo-reduce while running to avoid problems with
@@ -1263,15 +1263,15 @@ ActiveItem.defineType("Crank", {
   /* Update the rotation speed */
   _updateSpeed: function() {
     var v = this.getVariable("speed");
-    if (this._meterAnimID == null) this.render();
-    this._game.animator.set(this._meterAnimID, displayRound(v.value / v.max));
+    if (this._meterAnim == null) this.render();
+    this._meterAnim(displayRound(v.value / v.max));
   },
 
   /* Update the display angle */
   _updateRotation: function(now) {
     var v = this.getVariable("rotation");
-    if (this._iconAnimID == null) this.render();
-    this._game.animator.set(this._iconAnimID, displayRound(v.value));
+    if (this._iconAnim == null) this.render();
+    this._iconAnim(displayRound(v.value));
   },
 
   /* Start or stop turning the crank */
@@ -1350,7 +1350,7 @@ Item.defineType("Gauge", {
     value /= this._currentScale;
     if (value > cap) value = cap;
     if (this._pointerAnim == null) this.render();
-    this._game.animator.set(this._pointerAnim, displayRound(value / cap),
+    this._pointerAnim(displayRound(value / cap),
       this._game.animator.transitionDuration, 'cubic');
   },
 
