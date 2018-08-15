@@ -553,7 +553,7 @@ GameStory.prototype = {
     this.game.showItem("corridor", "start-reactor");
     this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
     this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERGY",
-                      [1, 10, 100], true);
+                      [1, 10, 100]);
     this.game.showGauge("corridor", "total-energy");
   },
 
@@ -1292,12 +1292,12 @@ ActiveItem.defineType("Crank", {
  * Currently, the Variable must have a minimum of zero. */
 Item.defineType("Gauge", {
   /* Initialize instance */
-  __init__: function(varname, max, description, scales, autoScale) {
+  __init__: function(varname, max, description, scales) {
     this.varname = varname;
     this.max = max;
     this.description = description;
     this.scales = scales;
-    this.autoScale = autoScale;
+    this.autoScale = true;
     this._game.getVariable(varname).addLateHandler(
       this._makeAction("_updatePointer"));
     this._currentScale = null;
