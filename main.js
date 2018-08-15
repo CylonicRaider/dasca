@@ -1104,6 +1104,13 @@ Item.defineType("Button", {
     }
   },
 
+  /* Update the text of the button */
+  setText: function(newText) {
+    this.text = newText;
+    var node = this.render();
+    node.textContent = newText;
+  },
+
   /* Conditional visibility backend */
   _updateVisibility: function(tab, active) {
     this._game.showItem(tab, this.name, (!! active));
