@@ -181,6 +181,7 @@ function Game(state, storage) {
   } else {
     this.state = deserialize(state, this._env);
   }
+  this.state.scheduler._onerror = this._onerror.bind(this);
   this.storage = storage;
   this.ui = new GameUI(this);
   this.story = new GameStory(this);
@@ -402,8 +403,8 @@ Game.prototype = {
   /* Stop running the game */
   exit: function() {
     this.save();
-    this.state.scheduler.running = false;
     this.running = false;
+    this.state.scheduler.stop();
     this.animator.stop();
   },
 
@@ -418,6 +419,12 @@ Game.prototype = {
       if (! v.hasOwnProperty(name)) continue;
       v[name].updateLate();
     }
+  },
+
+  /* Error handler */
+  _onerror: function(exc) {
+    console.error("Error in game:", exc);
+    this.state.scheduler.stop();
   },
 
   constructor: Game
