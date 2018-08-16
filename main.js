@@ -790,7 +790,6 @@ GameUI.prototype = {
   /* Show a UI tab */
   _showTab: function(name, hidden) {
     function suppressAnimation(node) {
-      console.log("Suppressing animation on", node);
       $replaceClass(node, "fade-in", "fade-in-suppressed");
     }
     var tabbtn = this._tabButtons[name];
