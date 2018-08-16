@@ -552,23 +552,15 @@ GameStory.prototype = {
 
   /* Finish looking around the corridor */
   _finishLookAroundCorridor: function() {
-    this.game.makeVariable("energy", 0);
+    this.game.makeVariable("energy", 0, 0, null);
     this.game.addItem("Crank", "crank", 1, 2, 1).attachTo("energy");
     this.game.showItem("corridor", "crank");
-    this.game.addItem("Button", "start-reactor", "Start reactor",
-                      "story.tryStartReactor");
-    this.game.showItem("corridor", "start-reactor");
+    this.game.addItem("Reactor", "reactor").attachTo("energy");
+    this.game.showItem("corridor", "reactor");
     this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
     this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERGY",
                       [1, 10, 100]);
     this.game.showGauge("corridor", "total-energy");
-  },
-
-  /* Attempt starting the reactor
-   *
-   * Will fail if there is not enough energy. */
-  tryStartReactor: function() {
-    this.game.showMessage("Nothing happens.");
   },
 
   constructor: GameStory
@@ -1149,9 +1141,9 @@ ActiveItem.defineType("Lighter", {
       ["button", "btn btn-small item-use", "..."],
       ["div", "item-bar", [["div", "item-bar-content"]]]
     ]);
-    $listen($sel(".item-use", ret), "click", this.use.bind(this));
-    var meterNode = $sel(".item-bar-content", ret);
     this._button = $sel(".item-use", ret);
+    $listen(this._button, "click", this.use.bind(this));
+    var meterNode = $sel(".item-bar-content", ret);
     this._anim = this._game.animator.register(function(value) {
       value = value * 100 + "%";
       if (meterNode.style.width != value)
@@ -1164,7 +1156,6 @@ ActiveItem.defineType("Lighter", {
 
   /* Update the fill meter */
   _updateMeter: function() {
-    /* Update fill meter */
     if (this._anim == null) this.render();
     var v = this.getVariable("fill");
     if (v.value == 0 && this.active) this.setActive(false);
@@ -1297,6 +1288,106 @@ ActiveItem.defineType("Crank", {
     if (factor == null) factor = 1;
     this._game.getVariable(varname).addHandler(
       this._makeVariableHandler("speed", factor));
+  }
+});
+
+/* The reactor
+ *
+ * Or at least what's visible of it. */
+ActiveItem.defineType("Reactor", {
+  /* Power consumption per unit of time */
+  POWER_CONSUMPTION: 10,
+
+  /* How quickly the power output increases */
+  POWER_CLIMB: 1,
+
+  /* How quickly the power output decreases (as an absolute value) */
+  POWER_FALL: 3,
+
+  /* Maximal power output of the reactor */
+  POWER_MAX: 20,
+
+  /* Initialize instance */
+  __init__: function() {
+    var v = this._makeVariable("power", 0, 0, this.POWER_MAX);
+    v.addHandler(this._makeAction("_updatePower"));
+    v.addLateHandler(this._makeAction("_updateMeter"));
+    this._powerVar = v;
+    this._anim = null;
+  },
+
+  /* Render this item into a UI node */
+  _render: function() {
+    var ret = $makeNode("div", "item-card fade-in", [
+      ["b", "item-name", "Reactor"],
+      ["button", "btn btn-small item-use", "..."],
+      ["div", "item-bar", [["div", "item-bar-content"]]]
+    ]);
+    this._button = $sel(".item-use", ret);
+    $listen(this._button, "click", this.use.bind(this));
+    var meterNode = $sel(".item-bar-content", ret);
+    this._anim = this._game.animator.register(function(value) {
+      value = value * 100 + "%";
+      if (meterNode.style.width != value)
+        meterNode.style.width = value;
+    });
+    this._updateMeter();
+    this._updateButton();
+    return ret;
+  },
+
+  /* Compute the current energy output */
+  _updateEnergy: function(variable) {
+    if (this._powerVar == null) this._powerVar = this.getVariable("power");
+    var ret = this._powerVar.value;
+    if (this.active) {
+      if (variable.value <= 0) {
+        this.setActive(false);
+      } else {
+        ret -= this.POWER_CONSUMPTION;
+      }
+    }
+    return ret;
+  },
+
+  /* Update the current power output */
+  _updatePower: function() {
+    if (this.active) {
+      return this.POWER_CLIMB;
+    } else {
+      return -this.POWER_FALL;
+    }
+  },
+
+  /* Update the power meter */
+  _updateMeter: function() {
+    if (this._anim == null) this.render();
+    var v = this.getVariable("power");
+    this._anim(displayRound(v.value / v.max));
+  },
+
+  /* Update the action button */
+  _updateButton: function() {
+    if (this._button == null) this.render();
+    if (this.active) {
+      this._button.textContent = "Shut down";
+    } else {
+      this._button.textContent = "Start up";
+    }
+  },
+
+  /* Funnel this reactor's power output into the given variable */
+  attachTo: function(varname, factor) {
+    if (factor == null) factor = 1;
+    this._game.getVariable(varname).addHandler(
+      this._makeAction("_updateEnergy"));
+  },
+
+  /* Change the activity state */
+  setActive: function(state) {
+    var ret = ActiveItem.prototype.setActive.call(this, state);
+    this._updateButton();
+    return ret;
   }
 });
 
