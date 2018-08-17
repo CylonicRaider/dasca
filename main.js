@@ -1025,6 +1025,7 @@ ActiveItem.prototype.constructor = ActiveItem;
 
 /* An Item with a specific structure */
 function MeterItem(game, name) {
+  this.label = "...";
   this._labelNode = null;
   this._buttonNode = null;
   this._bufferNode = null;
@@ -1037,7 +1038,7 @@ MeterItem.prototype = Object.create(ActiveItem.prototype);
 /* Generate the UI for this item */
 MeterItem.prototype._render = function() {
   var ret = $makeNode("div", "item-card fade-in", [
-      ["b", "item-name", "..."],
+      ["b", "item-name", [this.label]],
       ["button", "btn btn-small item-use", "..."],
       ["div", "item-bar", [
         ["div", "item-bar-buffer"],
@@ -1082,6 +1083,7 @@ MeterItem.prototype._setMeterVar = function(variable) {
 /* Set the label of this item */
 MeterItem.prototype.setLabel = function(text) {
   if (text == null) text = 'N/A';
+  this.label = text;
   if (this._labelNode == null) this.render();
   if (this._labelNode.textContent != text)
     this._labelNode.textContent = text;
