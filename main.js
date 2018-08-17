@@ -1004,6 +1004,68 @@ ActiveItem.prototype.bindFlag = function(flag) {
 
 ActiveItem.prototype.constructor = ActiveItem;
 
+/* An Item with a specific structure */
+function MeterItem(game, name) {
+  this._labelNode = null;
+  this._buttonNode = null;
+  this._meterAnim = null;
+  ActiveItem.apply(this, arguments);
+}
+
+MeterItem.prototype = Object.create(ActiveItem.prototype);
+
+/* Generate the UI for this item */
+MeterItem.prototype._render = function() {
+  var ret = $makeNode("div", "item-card fade-in", [
+      ["b", "item-name", "..."],
+      ["button", "btn btn-small item-use", "..."],
+      ["div", "item-bar", [["div", "item-bar-content"]]]
+    ]);
+  this._labelNode = $sel(".item-name", ret);
+  this._buttonNode = $sel(".item-use", ret);
+  $listen(this._buttonNode, "click", this.use.bind(this));
+  var meterNode = $sel(".item-bar-content", ret);
+  this._meterAnim = this._game.animator.register(function(value) {
+    value = value * 100 + "%";
+    if (meterNode.style.width != value)
+      meterNode.style.width = value;
+  });
+  this._updateLabel();
+  this._updateButton();
+  this._updateMeter();
+  return ret;
+};
+
+/* Update the label of this item */
+MeterItem.prototype._updateLabel = function(text) {
+  if (text == null) text = 'N/A';
+  if (this._labelNode == null) this.render();
+  if (this._labelNode.textContent != text)
+    this._labelNode.textContent = text;
+};
+
+/* Update the button label of this item */
+MeterItem.prototype._updateButton = function(text) {
+  if (text == null) text = 'N/A';
+  if (this._buttonNode == null) this.render();
+  if (this._buttonNode.textContent != text)
+    this._buttonNode.textContent = text;
+};
+
+/* Update this item's meter */
+MeterItem.prototype._updateMeter = function() {
+  /* NOP */
+};
+
+/* Set the activity state of this item */
+MeterItem.prototype.setActive = function(state) {
+  var ret = ActiveItem.prototype.setActive.call(this, state);
+  this._updateButton();
+  return ret;
+};
+
+MeterItem.prototype.constructor = MeterItem;
+
 /* Define an Item subtype
  *
  * A constructor with the given name is created; (own) properties are copied
@@ -1040,6 +1102,7 @@ Item.defineType = function(name, props) {
 
 /* Allow deriving concrete item types from ActiveItem */
 ActiveItem.defineType = Item.defineType;
+MeterItem.defineType = Item.defineType;
 
 /* A featureless piece of text */
 Item.defineType("Label", {
@@ -1116,7 +1179,7 @@ Item.defineType("Button", {
 });
 
 /* The lighter */
-ActiveItem.defineType("Lighter", {
+MeterItem.defineType("Lighter", {
   /* The rate at which the lighter consumes fuel */
   CONSUMPTION_PER_SECOND: 0.5,
 
@@ -1126,7 +1189,6 @@ ActiveItem.defineType("Lighter", {
     var v = this._makeVariable("fill", fill, 0, capacity);
     v.addHandler(this._makeAction("_deplete"));
     v.addLateHandler(this._makeAction("_updateMeter"));
-    this._anim = null;
   },
 
   /* Deplete the lighter's fuel */
@@ -1134,40 +1196,23 @@ ActiveItem.defineType("Lighter", {
     return (this.active) ? -this.CONSUMPTION_PER_SECOND / sched.fps : 0;
   },
 
-  /* Render the item into a UI node */
-  _render: function() {
-    var ret = $makeNode("div", "item-card fade-in", [
-      ["b", "item-name", "Lighter"],
-      ["button", "btn btn-small item-use", "..."],
-      ["div", "item-bar", [["div", "item-bar-content"]]]
-    ]);
-    this._button = $sel(".item-use", ret);
-    $listen(this._button, "click", this.use.bind(this));
-    var meterNode = $sel(".item-bar-content", ret);
-    this._anim = this._game.animator.register(function(value) {
-      value = value * 100 + "%";
-      if (meterNode.style.width != value)
-        meterNode.style.width = value;
-    });
-    this._updateMeter();
-    this._updateButton();
-    return ret;
-  },
-
-  /* Update the fill meter */
-  _updateMeter: function() {
-    if (this._anim == null) this.render();
-    var v = this.getVariable("fill");
-    if (v.value == 0 && this.active) this.setActive(false);
-    this._anim(displayRound(v.value / v.max));
+  /* Update the label */
+  _updateLabel: function() {
+    MeterItem.prototype._updateLabel.call(this, "Lighter");
   },
 
   /* Update the action button */
   _updateButton: function() {
-    if (this._button == null) this.render();
     var text = (this.active) ? "Extinguish" : "Ignite";
-    if (this._button.textContent != text)
-      this._button.textContent = text;
+    MeterItem.prototype._updateButton.call(this, text);
+  },
+
+  /* Update the fill meter */
+  _updateMeter: function() {
+    if (this._meterAnim == null) this.render();
+    var v = this.getVariable("fill");
+    if (v.value == 0 && this.active) this.setActive(false);
+    this._meterAnim(displayRound(v.value / v.max));
   },
 
   /* Set the burning state */
@@ -1187,9 +1232,7 @@ ActiveItem.defineType("Lighter", {
         this._game.showMessage("The flame is blue and spherical.");
       }
     }
-    ActiveItem.prototype.setActive.call(this, state);
-    this._updateButton();
-    return true;
+    return MeterItem.prototype.setActive.call(this, state);
   }
 });
 
@@ -1294,7 +1337,7 @@ ActiveItem.defineType("Crank", {
 /* The reactor
  *
  * Or at least what's visible of it. */
-ActiveItem.defineType("Reactor", {
+MeterItem.defineType("Reactor", {
   /* Power consumption per unit of time */
   POWER_CONSUMPTION: 10,
 
@@ -1313,27 +1356,6 @@ ActiveItem.defineType("Reactor", {
     v.addHandler(this._makeAction("_updatePower"));
     v.addLateHandler(this._makeAction("_updateMeter"));
     this._powerVar = v;
-    this._anim = null;
-  },
-
-  /* Render this item into a UI node */
-  _render: function() {
-    var ret = $makeNode("div", "item-card fade-in", [
-      ["b", "item-name", "Reactor"],
-      ["button", "btn btn-small item-use", "..."],
-      ["div", "item-bar", [["div", "item-bar-content"]]]
-    ]);
-    this._button = $sel(".item-use", ret);
-    $listen(this._button, "click", this.use.bind(this));
-    var meterNode = $sel(".item-bar-content", ret);
-    this._anim = this._game.animator.register(function(value) {
-      value = value * 100 + "%";
-      if (meterNode.style.width != value)
-        meterNode.style.width = value;
-    });
-    this._updateMeter();
-    this._updateButton();
-    return ret;
   },
 
   /* Compute the current energy output */
@@ -1359,21 +1381,22 @@ ActiveItem.defineType("Reactor", {
     }
   },
 
-  /* Update the power meter */
-  _updateMeter: function() {
-    if (this._anim == null) this.render();
-    var v = this.getVariable("power");
-    this._anim(displayRound(v.value / v.max));
+  /* Update the label */
+  _updateLabel: function() {
+    MeterItem.prototype._updateLabel.call(this, "Reactor");
   },
 
   /* Update the action button */
   _updateButton: function() {
-    if (this._button == null) this.render();
-    if (this.active) {
-      this._button.textContent = "Shut down";
-    } else {
-      this._button.textContent = "Start up";
-    }
+    var text = (this.active) ? "Shut down" : "Start up";
+    MeterItem.prototype._updateButton.call(this, text);
+  },
+
+  /* Update the power meter */
+  _updateMeter: function() {
+    if (this._meterAnim == null) this.render();
+    var v = this.getVariable("power");
+    this._meterAnim(displayRound(v.value / v.max));
   },
 
   /* Funnel this reactor's power output into the given variable */
@@ -1381,13 +1404,6 @@ ActiveItem.defineType("Reactor", {
     if (factor == null) factor = 1;
     this._game.getVariable(varname).addHandler(
       this._makeAction("_updateEnergy"));
-  },
-
-  /* Change the activity state */
-  setActive: function(state) {
-    var ret = ActiveItem.prototype.setActive.call(this, state);
-    this._updateButton();
-    return ret;
   }
 });
 
