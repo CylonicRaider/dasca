@@ -1399,16 +1399,16 @@ MeterItem.defineType("Reactor", {
   },
 
   /* Compute the current energy output */
-  _updateEnergy: function(energy) {
+  _updateEnergy: function(factor, energyVar) {
     var ret = this.getVariable("power").value;
     if (this.active) {
-      if (energy.value <= 0) {
+      if (energyVar.value <= 0) {
         this.setActive(false);
       } else {
         ret -= this.POWER_CONSUMPTION;
       }
     }
-    return ret;
+    return ret * factor;
   },
 
   /* Update the current power output */
