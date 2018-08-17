@@ -1027,6 +1027,7 @@ ActiveItem.prototype.constructor = ActiveItem;
 function MeterItem(game, name) {
   this._labelNode = null;
   this._buttonNode = null;
+  this._bufferNode = null;
   this._meterAnim = null;
   ActiveItem.apply(this, arguments);
 }
@@ -1038,12 +1039,16 @@ MeterItem.prototype._render = function() {
   var ret = $makeNode("div", "item-card fade-in", [
       ["b", "item-name", "..."],
       ["button", "btn btn-small item-use", "..."],
-      ["div", "item-bar", [["div", "item-bar-content"]]]
+      ["div", "item-bar", [
+        ["div", "item-bar-buffer"],
+        ["div", "item-bar-content"]
+      ]]
     ]);
   this._labelNode = $sel(".item-name", ret);
   this._buttonNode = $sel(".item-use", ret);
-  $listen(this._buttonNode, "click", this.use.bind(this));
+  this._bufferNode = $sel(".item-bar-buffer", ret);
   var meterNode = $sel(".item-bar-content", ret);
+  $listen(this._buttonNode, "click", this.use.bind(this));
   this._meterAnim = this._game.animator.register(function(value) {
     value = value * 100 + "%";
     if (meterNode.style.width != value)
@@ -1288,9 +1293,14 @@ ActiveItem.defineType("Crank", {
         ["b", "item-name", "Crank"],
         ["hr"],
         ["button", "btn btn-small item-use", "Turn"],
-        ["div", "item-bar", [["div", "item-bar-content"]]]
+        ["div", "item-bar", [
+          ["div", "item-bar-buffer"],
+          ["div", "item-bar-content"]
+        ]]
       ]]
     ]);
+    var bufferContent = $sel(".item-bar-buffer", ret);
+    bufferContent.style.width = "100%";
     var self = this;
     var icon = $sel(".item-icon", ret), button = $sel(".item-use", ret);
     [icon, button].forEach(function(node) {
@@ -1378,12 +1388,19 @@ MeterItem.defineType("Reactor", {
     this._powerVar = v;
   },
 
+  /* Turn this item into a DOM node */
+  _render: function() {
+    var ret = MeterItem.prototype._render.call(this);
+    var bufferSize = 1 - this.POWER_CONSUMPTION / this.POWER_MAX;
+    this._bufferNode.style.width = (bufferSize * 100) + "%";
+    return ret;
+  },
+
   /* Compute the current energy output */
-  _updateEnergy: function(variable) {
-    if (this._powerVar == null) this._powerVar = this.getVariable("power");
-    var ret = this._powerVar.value;
+  _updateEnergy: function(energy) {
+    var ret = this.getVariable("power").value;
     if (this.active) {
-      if (variable.value <= 0) {
+      if (energy.value <= 0) {
         this.setActive(false);
       } else {
         ret -= this.POWER_CONSUMPTION;

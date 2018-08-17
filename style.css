@@ -270,11 +270,20 @@ h1 {
   flex-grow: 1;
 }
 .item-card .item-bar {
+  position: relative;
   width: 100%;
   height: 0.25em;
   background: #c00000;
 }
+.item-card .item-bar-buffer {
+  position: absolute;
+  right: 0;
+  width: 0%;
+  height: 100%;
+  background: #0000c0;
+}
 .item-card .item-bar-content {
+  position: absolute;
   width: 0%;
   height: 100%;
   background: #008000;
