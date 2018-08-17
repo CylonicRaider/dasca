@@ -566,9 +566,9 @@ GameStory.prototype = {
     r.getVariable("power").addLateHandler(
       this._createTask("_checkReactorPower"));
     this.game.showItem("corridor", "reactor");
-    this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERGY",
-                      [1, 10, 100]);
-    this.game.showGauge("corridor", "total-energy");
+    this.game.addItem("Gauge", "energy-gauge", "energy", 1, "ENERGY",
+                      [10, 100, 1000]);
+    this.game.showGauge("corridor", "energy-gauge");
   },
 
   /* Check if the reactor has reached full power output */
@@ -1497,8 +1497,7 @@ Item.defineType("Gauge", {
     value /= this._currentScale;
     if (value > cap) value = cap;
     if (this._pointerAnim == null) this.render();
-    this._pointerAnim(displayRound(value / cap),
-      this._game.animator.transitionDuration, 'cubic');
+    this._pointerAnim(displayRound(value / cap), 0.5, 'cubic');
   },
 
   /* Change the description of this gauge */
