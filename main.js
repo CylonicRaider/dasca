@@ -479,6 +479,12 @@ GameStory.prototype = {
       parts, delayIfNot));
   },
 
+  /* Create a Task for invoking a particular method of the story */
+  _createTask: function(funcname) {
+    return this.game.createTaskEx("story." + funcname,
+      Array.prototype.slice.call(arguments, 1));
+  },
+
   /* Start */
   init: function() {
     this.game.addTab("start", "Bridge", {hidden: true});
@@ -501,7 +507,7 @@ GameStory.prototype = {
     this.game.addItem("Lighter", "lighter", 100, 70).bindFlag("lighter-lit");
     this.game.state.flags.derive("lit", "or", "lighter-lit");
     this.game.state.flags.addLateHandler("lit",
-      this.game.createTask("story._updateLighting"));
+      this._createTask("_updateLighting"));
     this.game.showItem("start", "lighter");
     this.game.addItem("Button", "look-around-start", "Look around",
       "story.lookAroundStart").showWhenActive("start", "lighter");
@@ -555,12 +561,25 @@ GameStory.prototype = {
     this.game.makeVariable("energy", 0, 0, null);
     this.game.addItem("Crank", "crank", 1, 2, 1).attachTo("energy");
     this.game.showItem("corridor", "crank");
-    this.game.addItem("Reactor", "reactor").attachTo("energy");
+    var r = this.game.addItem("Reactor", "reactor");
+    r.attachTo("energy");
+    r.getVariable("power").addLateHandler(
+      this._createTask("_checkReactorPower"));
     this.game.showItem("corridor", "reactor");
-    this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
     this.game.addItem("Gauge", "total-energy", "energy", 100, "ENERGY",
                       [1, 10, 100]);
     this.game.showGauge("corridor", "total-energy");
+  },
+
+  /* Check if the reactor has reached full power output */
+  _checkReactorPower: function(value, variable) {
+    if (value == variable.max && this.game.setFlag("reactor-full-power"))
+      this.toBeContinued();
+  },
+
+  /* Story is not developed beyond this point */
+  toBeContinued: function() {
+    this.game.showMessage(["i", null, "\u2014 T.B.C. \u2014"]);
   },
 
   constructor: GameStory
