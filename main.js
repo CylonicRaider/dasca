@@ -1392,7 +1392,7 @@ MeterItem.defineType("Reactor", {
   attachTo: function(varname, factor) {
     if (factor == null) factor = 1;
     this._game.getVariable(varname).addHandler(
-      this._makeAction("_updateEnergy"));
+      this._makeAction("_updateEnergy", factor));
   }
 });
 
