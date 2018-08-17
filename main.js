@@ -1030,18 +1030,9 @@ MeterItem.prototype._render = function() {
     if (meterNode.style.width != value)
       meterNode.style.width = value;
   });
-  this._updateLabel();
   this._updateButton();
   this._updateMeter();
   return ret;
-};
-
-/* Update the label of this item */
-MeterItem.prototype._updateLabel = function(text) {
-  if (text == null) text = 'N/A';
-  if (this._labelNode == null) this.render();
-  if (this._labelNode.textContent != text)
-    this._labelNode.textContent = text;
 };
 
 /* Update the button label of this item */
@@ -1053,8 +1044,23 @@ MeterItem.prototype._updateButton = function(text) {
 };
 
 /* Update this item's meter */
-MeterItem.prototype._updateMeter = function() {
-  /* NOP */
+MeterItem.prototype._updateMeter = function(value, variable) {
+  if (this._meterAnim == null) this.render();
+  if (variable != null) value = displayRound(value / variable.max);
+  this._meterAnim(value);
+};
+
+/* Wire the given variable to update this item's meter */
+MeterItem.prototype._setMeterVar = function(variable) {
+  variable.addLateHandler(this._makeAction("_updateMeter"));
+};
+
+/* Set the label of this item */
+MeterItem.prototype.setLabel = function(text) {
+  if (text == null) text = 'N/A';
+  if (this._labelNode == null) this.render();
+  if (this._labelNode.textContent != text)
+    this._labelNode.textContent = text;
 };
 
 /* Set the activity state of this item */
@@ -1186,19 +1192,15 @@ MeterItem.defineType("Lighter", {
   /* Initialize instance */
   __init__: function(capacity, fill) {
     if (! fill) fill = 0;
+    this.setLabel("Lighter");
     var v = this._makeVariable("fill", fill, 0, capacity);
     v.addHandler(this._makeAction("_deplete"));
-    v.addLateHandler(this._makeAction("_updateMeter"));
+    this._setMeterVar(v);
   },
 
   /* Deplete the lighter's fuel */
   _deplete: function(variable, sched) {
     return (this.active) ? -this.CONSUMPTION_PER_SECOND / sched.fps : 0;
-  },
-
-  /* Update the label */
-  _updateLabel: function() {
-    MeterItem.prototype._updateLabel.call(this, "Lighter");
   },
 
   /* Update the action button */
@@ -1208,11 +1210,9 @@ MeterItem.defineType("Lighter", {
   },
 
   /* Update the fill meter */
-  _updateMeter: function() {
-    if (this._meterAnim == null) this.render();
-    var v = this.getVariable("fill");
-    if (v.value == 0 && this.active) this.setActive(false);
-    this._meterAnim(displayRound(v.value / v.max));
+  _updateMeter: function(value, variable) {
+    if (value == 0 && this.active) this.setActive(false);
+    MeterItem.prototype._updateMeter.call(this, value, variable);
   },
 
   /* Set the burning state */
@@ -1352,9 +1352,10 @@ MeterItem.defineType("Reactor", {
 
   /* Initialize instance */
   __init__: function() {
+    this.setLabel("Reactor");
     var v = this._makeVariable("power", 0, 0, this.POWER_MAX);
     v.addHandler(this._makeAction("_updatePower"));
-    v.addLateHandler(this._makeAction("_updateMeter"));
+    this._setMeterVar(v);
     this._powerVar = v;
   },
 
@@ -1381,22 +1382,10 @@ MeterItem.defineType("Reactor", {
     }
   },
 
-  /* Update the label */
-  _updateLabel: function() {
-    MeterItem.prototype._updateLabel.call(this, "Reactor");
-  },
-
   /* Update the action button */
   _updateButton: function() {
     var text = (this.active) ? "Shut down" : "Start up";
     MeterItem.prototype._updateButton.call(this, text);
-  },
-
-  /* Update the power meter */
-  _updateMeter: function() {
-    if (this._meterAnim == null) this.render();
-    var v = this.getVariable("power");
-    this._meterAnim(displayRound(v.value / v.max));
   },
 
   /* Funnel this reactor's power output into the given variable */
