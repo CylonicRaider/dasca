@@ -471,10 +471,7 @@ GameStory.prototype = {
     ["Three doors lead out of the room; apart from the one to the bridge, " +
       "there is one opposite to it, and one leads through the " +
       "\u201cfloor\u201d."],
-    ["On the wall to the bridge, a big button of an unrecognizable color " +
-      "stands out."],
-    ["There is a small handcrank nearby. It looks stiff, but still " +
-      "operational."],
+    ["On the wall to the bridge, one particular panel stands out."],
     [null, 0, "story._finishLookAroundCorridor"]
   ],
 
@@ -565,15 +562,35 @@ GameStory.prototype = {
   _finishLookAroundCorridor: function() {
     this.game.makeVariable("energy", 0, 0, null);
     this.game.addItem("Crank", "crank", 1, 2, 1).attachTo("energy");
-    this.game.showItem("corridor", "crank");
     var r = this.game.addItem("Reactor", "reactor");
     r.attachTo("energy");
     r.getVariable("power").addLateHandler(
       this._createTask("_checkReactorPower"));
-    this.game.showItem("corridor", "reactor");
+    this.game.addItem("Button", "toggle-crank-display", "Open cover",
+      "toggleFlag", "crank-visible");
+    this.game.state.flags.addLateHandler("crank-visible",
+      this._createTask("_updateCrankDisplay"));
+    this.game.showItem("corridor", "toggle-crank-display");
     this.game.addItem("Gauge", "energy-gauge", "energy", 1, "ENERGY",
                       [10, 100, 1000, 10000]);
     this.game.showGauge("corridor", "energy-gauge");
+  },
+
+  /* Show or hide the crank and reactor depending on the state of the
+   * corresponding flag */
+  _updateCrankDisplay: function(visible) {
+    if (visible) {
+      if (this.game.setFlag("crank-intro-written"))
+        this.game.showMessage("There is a small handcrank nearby. It looks " +
+          "stiff, but still operational.");
+      this.game.showItem("corridor", "crank");
+      this.game.showItem("corridor", "reactor");
+    } else {
+      this.game.hideItem("corridor", "crank");
+      this.game.hideItem("corridor", "reactor");
+    }
+    var text = (visible) ? "Close cover" : "Open cover";
+    this.game.state.items["toggle-crank-display"].setText(text);
   },
 
   /* Check if the reactor has reached full power output */
