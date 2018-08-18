@@ -448,28 +448,28 @@ GameStory.prototype = {
 
   /* Description of surroundings */
   DESCRIPTION_START: [
-    ["You are on the bridge of a spacecraft.", 4],
+    ["You are on the bridge of a spacecraft."],
     ["The windows would provide a wide panorama onto (presumably) space " +
-      "if they were not blocked by dark shutters.", 8],
+      "if they were not blocked by dark shutters."],
     ["The large instrument panel is lifeless; all needles are resting at " +
-      "zero.", 8],
-    ["You are strapped into a comfortable chair.", 4],
+      "zero."],
+    ["You are strapped into a comfortable chair."],
     ["Behind you, there is a plain wall, pierced by a closed rectangular " +
-      "door, through which a round window peeks into a dark room.", 8],
+      "door, through which a round window peeks into a dark room."],
     [null, 0, "story._finishLookAroundStart"]
   ],
 
   /* Description of corridor */
   DESCRIPTION_CORRIDOR: [
     ["The room's walls are covered by semitranslucent panels. The labels " +
-      "are hardly decipherable under the weak light.", 8],
+      "are hardly decipherable under the weak light."],
     ["Three doors lead out of the room; apart from the one to the bridge, " +
       "there is one opposite to it, and one leads through the " +
-      "\u201cfloor\u201d.", 8],
+      "\u201cfloor\u201d."],
     ["On the wall to the bridge, a big button of an unrecognizable color " +
-      "stands out.", 8],
+      "stands out."],
     ["There is a small handcrank nearby. It looks stiff, but still " +
-      "operational.", 8],
+      "operational."],
     [null, 0, "story._finishLookAroundCorridor"]
   ],
 
@@ -595,6 +595,10 @@ function StoryFragment(game, parts, delayIfNot) {
 }
 
 StoryFragment.prototype = {
+  /* Estimation of reading speed based on old manually adjusted timings,
+   * in characters per second */
+  READ_SPEED: 10,
+
   /* Check whether a new story fragment should be displayed
    *
    * ...And do so if necessary. Return true when nothing further has to be
@@ -609,7 +613,10 @@ StoryFragment.prototype = {
     }
     var part = this.parts[this.nextIndex++];
     if (part[0] != null) this._game.showMessage(part[0]);
-    this.nextTime = now + part[1];
+    var delay = part[1];
+    if (delay == null)
+      delay = (part[0] == null) ? 0 : part[0].length / this.READ_SPEED;
+    this.nextTime = now + delay;
     if (part.length > 2) {
       var task = this._game.createTaskEx.apply(this._game, part.slice(2));
       task.cb.apply(task, arguments);
