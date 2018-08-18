@@ -1318,6 +1318,14 @@ ActiveItem.defineType("Crank", {
       $listen(node, "mouseout", function(evt) {
         if (evt.target == node) self._turn(false);
       });
+      $listen(node, "keydown", function(evt) {
+        if (evt.keyCode != 13 && evt.keyCode != 32) return;
+        self._turn(true);
+      });
+      $listen(node, "keyup", function(evt) {
+        if (evt.keyCode != 13 && evt.keyCode != 32) return;
+        self._turn(false);
+      });
       $listen(node, "blur", function(evt) {
         if (evt.relatedTarget != icon && evt.relatedTarget != button)
           self._turn(false);
