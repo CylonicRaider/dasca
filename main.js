@@ -567,7 +567,7 @@ GameStory.prototype = {
       this._createTask("_checkReactorPower"));
     this.game.showItem("corridor", "reactor");
     this.game.addItem("Gauge", "energy-gauge", "energy", 1, "ENERGY",
-                      [10, 100, 1000]);
+                      [10, 100, 1000, 10000]);
     this.game.showGauge("corridor", "energy-gauge");
   },
 
