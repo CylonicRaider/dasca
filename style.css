@@ -299,6 +299,9 @@ h1 {
   display: inline-block;
   width: 10em;
 }
+.gauge svg {
+  display: block;
+}
 
 .fade-in {
   animation: fade-in 200ms cubic-bezier(0.5, 0.0, 1.0, 1.0);
