@@ -252,10 +252,10 @@ h1 {
   height: 2.4em;
 }
 .item-card .item-icon:active, .item-card .item-icon:focus {
-  outline: 1px dotted #808080;
+  outline: 1px dotted #c0c0c0;
 }
 .item-card .item-icon:active {
-  outline-color: #c0c0c0;
+  outline-color: #808080;
 }
 
 .item-card .item-name, .item-card .item-rows {
