@@ -1058,9 +1058,8 @@ MeterItem.prototype._render = function() {
   var meterNode = $sel(".item-bar-content", ret);
   $listen(this._buttonNode, "click", this.use.bind(this));
   this._meterAnim = this._game.animator.register(function(value) {
-    value = value * 100 + "%";
-    if (meterNode.style.width != value)
-      meterNode.style.width = value;
+    var cssValue = "translateX(" + (value * 100 - 100) + "%)";
+    meterNode.style.transform = cssValue;
   });
   this._updateButton();
   this._updateMeter();
@@ -1337,7 +1336,8 @@ ActiveItem.defineType("Crank", {
       iconContent.style.transform = "rotate(" + (value % 1 * 360) + "deg)";
     });
     this._meterAnim = this._game.animator.register(function(value) {
-      meterContent.style.width = (value * 100) + "%";
+      var cssValue = "translateX(" + (value * 100 - 100) + "%)";
+      meterContent.style.transform = cssValue;
     });
     /* Do not modulo-reduce while running to avoid problems with
      * transitions */
