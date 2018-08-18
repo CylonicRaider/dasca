@@ -231,6 +231,11 @@ Game.prototype = {
     return this.state.flags.set(name, false);
   },
 
+  /* Toggle a flag */
+  toggleFlag: function(name) {
+    this.state.flags.set(name, ! this.state.flags.get(name));
+  },
+
   /* Create a task for addTask
    *
    * Arguments are passed as an array. */
