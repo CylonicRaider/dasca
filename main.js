@@ -1301,7 +1301,7 @@ ActiveItem.defineType("Crank", {
     var vs = this._makeVariable("speed", 0, 0, speedcap);
     vs.addHandler(this._makeAction("_getIncrement"));
     vs.addLateHandler(this._makeAction("_updateSpeed"));
-    var vr = this._makeVariable("rotation", 0);
+    var vr = this._makeVariable("rotation", Math.random());
     vr.addHandler(this._makeVariableHandler("speed", 1));
     vr.addLateHandler(this._makeAction("_updateRotation"));
     // speedcap is stored in the variable.
