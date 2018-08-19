@@ -2,270 +2,172 @@
 /* Dasca, an idle game by @CylonicRaider (github.com/CylonicRaider/dasca)
  * Abstract engine for JS-based idle games */
 
-'use strict';
-
-/* *** Clock ***
- * An object allowing to sample "time" (as defined by an external source)
- * with a linear transform in place. */
-
-/* Construct a new clock
- * source is a function that, when called, returns the current time; scale
- * and offset modify source's output in a linear fashion: the reading of
- * source is multiplied by scale and offset is added to that to obtain the
- * current time. If scale is undefined or null, it defaults to 1; if offset
- * is null, it is computed such that the clock starts counting from zero. */
-function Clock(source, scale, offset) {
-  if (scale == null) scale = 1.0;
-  if (offset == null) offset = -source() * scale;
-  this.source = source;
-  this.scale = scale;
-  this.offset = offset;
-}
-
-Clock.prototype = {
-  /* Sample the current time */
-  now: function() {
-    return this.source() * this.scale + this.offset;
-  },
-
-  /* Construct a new clock from this one, applying the given transformation
-   * The new clock derives its time from the same (!) source as this one,
-   * but its scale and offset are modified to simulate a clock constructed
-   * like
-   *     new Clock(this, scale, offset);
-   */
-  derive: function(scale, offset) {
-    if (scale == null) scale = 1.0;
-    if (offset != null) offset = this.offset * scale + offset;
-    var ret = new Clock(this.source, this.scale * scale, offset);
-    if (this._realTime) ret._realTime = true;
-    return ret;
-  },
-
-  /* Change the scale of the clock, ensuring that readings continue to be
-   * continuous */
-  setScale: function(scale) {
-    var samp = this.source();
-    this.offset = (this.scale - scale) * samp + this.offset;
-    this.scale = scale;
-  },
-
-  /* Change the scale of the clock relatively to the current one */
-  changeScale: function(factor) {
-    this.setScale(this.scale * factor);
-  },
-
-  /* Jump to the given time */
-  setTime: function(time) {
-    this.offset = time - this.source() * this.scale;
-  },
-
-  /* Change the time reported by the clock by the given increment */
-  changeTime: function(delta) {
-    this.offset -= delta;
-  },
-
-  /* Serialization boilerplate */
-  constructor: Clock,
-
-  /* Seralize */
-  __save__: function() {
-    if (! this._realTime) throw new Error("Clock not serializable!");
-    return {scale: this.scale, time: this.now()};
-  },
-
-  /* Deserialize */
-  __restore__: function(data) {
-    return Clock.realTime(data.scale, data.time);
-  }
-};
-
-/* Construct a clock that returns (optionally scaled) real time
- * The clock counts from zero */
-Clock.realTime = function(scale, start) {
-  if (scale == null) scale = 1.0;
-  var offset = null;
-  if (start != null) offset = start - performance.now() / 1000.0 * scale;
-  var ret = new Clock(function() {
-    return performance.now() / 1000.0;
-  }, scale, offset);
-  ret._realTime = true;
-  return ret;
-};
+"use strict";
 
 /* *** Scheduler ***
- * Schedules callbacks to happen at certain times as defined by a Clock
- * instance. */
+ *
+ * Runs callbacks at a defined rate. */
 
 /* Construct a new scheduler
- * requeue is a funtion that somehow ("magically") ensures the function
- * passed to it is asynchronously called again some short time later; tasks
- * is an ordered array of objects whose "time" property is used to determine
- * when they are to run; contTasks is an array of tasks to be run
- * continuously, i.e. at every call of run(), until they return a true value,
- * at which point they are removed; clock is a Clock instance determining the
- * time this instance works with. The "running" property is set to true; it
- * can be used to stop the Scheduler. To start it, ensure the "running"
- * property is true and call the run() method. */
-function Scheduler(requeue, tasks, contTasks, clock) {
-  if (tasks == null) tasks = [];
-  if (contTasks == null) contTasks = [];
-  if (clock == null) clock = Clock.realTime();
-  this.requeue = requeue;
-  this.tasks = tasks;
-  this.contTasks = contTasks;
-  this.clock = clock;
-  this.running = true;
-  this._idle = true;
+ *
+ * Callbacks are run in "iterations". Scheduler attempts to have the
+ * iterations run at an even rate of fps frames per second; if that fails,
+ * iterations are run in batches such that fps is preserved on average.
+ * The Scheduler has a notion of "time" which starts at zero when the
+ * Scheduler is created and is increased by a fixed increment after each
+ * iteration such that it follows wall clock time (on average); tasks are
+ * scheduled for concrete values of this time. */
+function Scheduler(fps) {
+  this.fps = fps;
+  this.running = false;
+  this.time = 0;
+  this.tasks = [];
+  this.contTasks = [];
+  this._nextRun = null;
+  this._timer = null;
+  this._onerror = null;
 }
 
 Scheduler.prototype = {
-  /* Queue the next run of the scheduler, and perform any tasks whose time
-   * has come
-   * After obtaining a timestamp from the clock, all tasks whose time
-   * property is not less than the timestamp are removed from the queue and
-   * run using runTask(); after that, if the "running" property is true,
-   * requeue is called with a bound version of this.run as only argument to
-   * trigger another execution. */
-  run: function() {
-    /* Abort if not running */
-    if (! this.running) return;
-    /* Obtain current timestamp */
-    var now = this.clock.now();
-    /* For each task that is (over)due */
-    while (this.tasks[0] && this.tasks[0].time <= now) {
-      this.runTask(this.tasks.shift(), now);
-    }
-    /* Run the continuous tasks */
-    for (var i = 0; i < this.contTasks.length; i++) {
-      if (this.runTask(this.contTasks[i], now))
-        this.contTasks.splice(i--, 1);
-    }
-    /* Schedule next iteration */
-    if (this.tasks.length || this.contTasks.length) {
-      this.requeue(this.run.bind(this));
-    } else {
-      this._idle = true;
-    }
-  },
-
-  /* Run a singular task, providing the given timestamp
-   * The default implementation calls the task's "cb" (which is assumed to be
-   * a function) with the value of now and the Scheduler instance as
-   * arguments, and consumes exceptions by logging them to the console. */
-  runTask: function(task, now) {
-    try {
-      return task.cb(now, this);
-    } catch (e) {
-      console.error(e);
-    }
-  },
-
   /* Schedule a task to be run
-   * If time is not null, it is inserted into task as the "time" property;
-   * after that, the task is inserted at an appropriate position. */
+   *
+   * task should have a cb property, which is invoked with this Scheduler's
+   * current time as the first argument and this Scheduler instance as the
+   * second argument (and the task object as the context). time is the
+   * absolute time the task is going to be run at; if not null, it is
+   * assigned to task as a property; if task has no non-null "time" property
+   * after that, it defaults to zero, so that the task will run on the next
+   * iteration.
+   *
+   * Returns the task parameter. */
   addTask: function(task, time) {
     if (time != null) task.time = time;
-    time = task.time;
+    if (task.time == null) task.time = 0;
     var i;
     for (i = 0; i < this.tasks.length; i++) {
-      if (this.tasks[i].time > time) break;
+      if (this.tasks[i].time > task.time) break;
     }
     this.tasks.splice(i, 0, task);
-    if (this.running && this._idle) {
-      this._idle = false;
-      this.requeue(this.run.bind(this));
-    }
+    return task;
   },
 
-  /* Schedule a task to be run after delta units of time */
-  addTaskIn: function(task, delta) {
-    this.addTask(task, this.clock.now() + delta);
+  /* Schedule a task to be run after some iterations
+   *
+   * See addTask() for the semantics of task (in particular, its "time"
+   * property remains absolute); additionally to them, if the callback returns
+   * a truthy value, the task is removed. delay is the time the task stays idle
+   * for before it is run; values no greater than zero cause the  task to run
+   * on the next iteration.
+   *
+   * Returns the task parameter. */
+  addTaskIn: function(task, delay) {
+    return this.addTask(task, this.time + delay);
   },
 
-  /* Remove a task again */
+  /* Schedule task to be run on every iteration henceforth
+   *
+   * task should have a cb property as detailed in addTask(). To un-schedule
+   * task, see removeContTask().
+   *
+   * Returns the task parameter. */
+  addContTask: function(task) {
+    this.contTasks.push(task);
+    return task;
+  },
+
+  /* Cancel the individual scheduling of task */
   removeTask: function(task) {
     var idx = this.tasks.indexOf(task);
     if (idx != -1) this.tasks.splice(idx, 1);
   },
 
-  /* Add a continuous task */
-  addContTask: function(task) {
-    this.contTasks.push(task);
-    if (this.running && this._idle) {
-      this._idle = false;
-      this.requeue(this.run.bind(this));
-    }
-  },
-
-  /* Remove a continuous task */
+  /* Cancel the continuous scheduling of task */
   removeContTask: function(task) {
     var idx = this.contTasks.indexOf(task);
     if (idx != -1) this.contTasks.splice(idx, 1);
   },
 
-  /* Cancel all tasks */
-  clear: function() {
-    this.tasks.splice(0, this.tasks.length);
+  /* Actually run the given task */
+  _runTask: function(task) {
+    try {
+      return task.cb(this.time, this);
+    } catch (e) {
+      if (this._onerror) {
+        try {
+          this._onerror(e);
+        } catch (e2) {
+          console.error("Exception while running error handler:", e2);
+        }
+      } else {
+        console.error("Exception while running task:", e);
+      }
+    }
   },
 
-  /* OOP boilerplate */
-  constructor: Scheduler,
-
-  /* Prepare for serializing a Scheduler */
-  __save__: function() {
-    var ret = {type: this._type, tasks: this.tasks,
-               contTasks: this.contTasks, clock: this.clock,
-               running: this.running};
-    if (this._type == "strobe") {
-      ret.fps = this._fps;
-    } else if (this._type != "animated") {
-      throw new Error("Scheduler not serializable!");
+  /* Perform a single iteration of the scheduler */
+  _runIteration: function() {
+    while (this.tasks.length) {
+      if (this.tasks[0].time > this.time) break;
+      var task = this.tasks.splice(0, 1)[0];
+      this._runTask(task);
     }
-    return ret;
+    var tasklist = this.contTasks.slice();
+    for (var i = 0; i < tasklist.length; i++) {
+      if (this._runTask(tasklist[i])) {
+        this.removeContTask(tasklist[i]);
+      }
+    }
+    this.time += 1.0 / this.fps;
   },
 
-  /* Deserialize a Scheduler */
-  __restore__: function(data) {
-    var ret;
-    if (data.type == "animated") {
-      ret = Scheduler.makeAnimated(data.clock);
-    } else if (data.type == "strobe") {
-      ret = Scheduler.makeStrobe(data.fps, data.clock);
+  /* Perform another run of the scheduler, if it is to be running */
+  _checkRun: function() {
+    this._timer = null;
+    if (this.running) {
+      this.run();
+    } else {
+      this._nextRun = null;
     }
-    ret.tasks = data.tasks;
-    ret.contTasks = data.contTasks;
-    ret.running = data.running;
-    return ret;
-  }
-};
+  },
 
-/* Create a Scheduler for animations */
-Scheduler.makeAnimated = function(clock) {
-  var ret = new Scheduler(requestAnimationFrame.bind(window), null, null,
-                          clock);
-  ret._type = "animated";
-  return ret;
-};
+  /* Force the scheduler to run (again) */
+  run: function() {
+    this.running = true;
+    if (this._nextRun != null) {
+      var now = Date.now();
+      while (this.running && this._nextRun <= now) {
+        this._runIteration();
+        this._nextRun += 1000.0 / this.fps;
+      }
+    } else {
+      this._runIteration();
+      this._nextRun = Date.now() + 1000.0 / this.fps;
+    }
+    if (this.running) {
+      if (this._timer == null)
+        this._timer = setTimeout(this._checkRun.bind(this),
+                                 this._nextRun - Date.now());
+    } else {
+      this._nextRun = null;
+    }
+  },
 
-/* Create a Scheduler that polls tasks at regular intervals */
-Scheduler.makeStrobe = function(fps, clock) {
-  var delay = 1000.0 / fps;
-  var ret = new Scheduler(function(cb) {
-    setTimeout(cb, delay);
-  }, null, null, clock);
-  ret._type = "strobe";
-  ret._fps = fps;
-  return ret;
+  /* Stop the scheduler after the current iteration */
+  stop: function() {
+    this.running = false;
+  },
+
+  constructor: Scheduler
 };
 
 /* *** Serialization ***
- * Serializes object trees (!) into JSON strings, allowing reified objects to
- * be of the correct type, and to hook their (de)serialization process.
- * Input containing enumerable function properties is rejected (since those
- * are silently swallowed by JSON); use hooks to meaningfully handle them.
- * When hooks are not used, properties whose names start with underscores (in
- * particular the special properties) are removed. */
+ *
+ * Serializes object trees (without self references) into JSON strings,
+ * allowing reified objects to be of the correct type, and to hook their
+ * (de)serialization process. Input containing enumerable function properties
+ * is rejected (since those are silently swallowed by JSON); use hooks or the
+ * Action class below to serialize references to functions. When hooks are
+ * not used, properties whose names start with underscores are removed. */
 
 /* Resolve a dotted name string to an object */
 function findObject(name, env) {
@@ -305,14 +207,14 @@ function serialize(obj) {
         ret[prop] = value[prop];
       }
     }
-    /* Add __type__ */
+    /* Add type for later retrieval */
     ret.__type__ = cons;
     /* Done */
     return ret;
   });
 }
 
-/* Deserialize a JSON string into an object structure */
+/* Deserialize a JSON string from serialize() into an object structure */
 function deserialize(obj, env) {
   if (env == null) env = window;
   return JSON.parse(obj, function(name, value) {
@@ -344,7 +246,7 @@ function deserialize(obj, env) {
   });
 }
 
-/* Turn a JSON string into an ASCII equivalent */
+/* Ensure a JSON string contains only ASCII characters */
 function json2ascii(s) {
   return s.replace(/[^ -~]/g, function(ch) {
     s = ch.charCodeAt(0).toString(16);
@@ -358,9 +260,11 @@ function json2ascii(s) {
 }
 
 /* Construct a new StorageCell
+ *
  * The object encapsulates the value associated with a particular
- * localStorage key, and additionally caches saved values in memory (in case
- * localStorage is not available). */
+ * localStorage key, caches saved values in memory (in case localStorage is
+ * not available), and allows transparently serializing/deserializing
+ * values. */
 function StorageCell(name) {
   this.name = name;
   this.rawValue = undefined;
@@ -395,20 +299,21 @@ StorageCell.prototype = {
     this.saveRaw(serialize(val));
   },
 
-  /* OOP... */
   constructor: StorageCell
 };
 
 /* *** Action ***
+ *
  * A serializable wrapper around a method call. Can be used as a callback for
  * Scheduler; for that reason, a property named "time" is serialized and
  * restored if present. */
 
 /* Construct a new Action
+ *
  * self is the name (!) of an object to be resolved relative to env; func is
  * the name of a function to be resolved relative to self; args is an array
  * of arguments. The function is called with the object resolved for self as
- * the this object and args as the positional arguments.
+ * the context and args as the positional arguments.
  * If args is omitted, an empty array is used; if env is omitted, the global
  * object (i.e. window) is used. */
 function Action(self, func, args, env) {
@@ -419,27 +324,26 @@ function Action(self, func, args, env) {
 }
 
 Action.prototype = {
-  /* Do what is said on the tin
-   * Resolve and run the function represented by this object as described
-   * along with the constructor, and return its return value.
-   * Arguments passed to run() are appended to the arguments stored in the
-   * object. */
+  /* Invoke this Action
+   *
+   * This function is present to provide a more meaningful name. */
   run: function() {
-    // Implementation moved to the more-used cb().
     return this.cb.apply(this, arguments);
   },
 
-  /* Callback
-   * Many objects invoking others expect the functionality to be located at
-   * this attributes; this method is hence identical to run(). */
+  /* Invoke this Action
+   *
+   * Resolve and run the function represented by this object as described
+   * along with the constructor, and return its return value.
+   * Arguments passed to this function are appended to the arguments stored
+   * in the object. */
   cb: function() {
     var self = findObject(this.self, this.env);
     var method = findObject(this.func, self);
     return method.apply(self,
-                        Array.prototype.concat.apply(this.args, arguments));
+      Array.prototype.concat.apply(this.args, arguments));
   },
 
-  /* OOP boilerplate */
   constructor: Action,
 
   /* Prepare for serialization */
@@ -456,9 +360,9 @@ Action.prototype = {
 };
 
 /* Construct a CachingAction
+ *
  * The class derives from Action, and only differs in caching the self object
- * and method (under the assumption that those will never change).
- */
+ * and method (under the assumption that those will never change). */
 function CachingAction(self, func, args, env) {
   Action.apply(this, arguments);
   this._self = null;
@@ -468,10 +372,11 @@ function CachingAction(self, func, args, env) {
 CachingAction.prototype = Object.create(Action.prototype);
 
 /* Run the stored function
+ *
  * Differently to Action.prototype.run, this function caches the object and
  * the method to invoke. Note that the cache may be invalidated unpredictably
  * (such as when the object is serialized). */
-CachingAction.prototype.run = function() {
+CachingAction.prototype.cb = function() {
   if (this._func == null) {
     this._self = findObject(this.self, this.env);
     this._func = findObject(this.func, this._self);
@@ -480,5 +385,384 @@ CachingAction.prototype.run = function() {
     Array.prototype.concat.apply(this.args, arguments));
 };
 
-/* OOP something */
 CachingAction.prototype.constructor = CachingAction;
+
+/* *** Variable ***
+ *
+ * An (optinally bounded) numerical value with a constant or variable rate of
+ * change.
+ *
+ * Variables are primarily managed via their "derivatives" (or discrete
+ * approximations of those); those are determined by summing up values
+ * returned by various "handlers". To perform actions that depend on the value
+ * of the Variable, "late handlers" are provided.
+ * The "mod" attribute, if not null, specifies a base to modulo-reduce the
+ * Variable against after updates; "min" and "max" specify upper and lower
+ * bounds (which are applied after modulo reduction).
+ * NOTE that neither sort of handler may mutate the Variable's value directly;
+ *      changes are automatically aggregated by the implementation.
+ * NOTE additionally that late handlers do not have a consistent world view
+ *      among different Variable-s: some may have been updated while some may
+ *      not. "Normal" handlers see the Variable uniformly in the state
+ *      *before* the round of updates. */
+
+/* Construct a new Variable
+ *
+ * value is the initial value for the variable; min and max (if given) define
+ * the range of values this Variable can assume. */
+function Variable(value, min, max) {
+  this.value = value;
+  this.min = min;
+  this.max = max;
+  this._newValue = null;
+  this.mod = null;
+  this.handlers = [];
+  this.lateHandlers = [];
+}
+
+Variable.prototype = {
+  /* Retrieve the value of this Variable
+   *
+   * If factor is not null, the value is multipled with it before returning.
+   * This can be used in conjunction with an Action to implement a handler for
+   * another Variable that references this one. (Note that storing the variable
+   * itself might lead to duplication when it is deserialized.)
+   */
+  getValue: function(factor) {
+    if (factor != null) {
+      return this.value * factor;
+    } else {
+      return this.value;
+    }
+  },
+
+  /* Add a new handler to this Variable
+   *
+   * hnd is an object which has a rate or a cb property. If the rate property
+   * is present, it is used as a (per-second) rate of change for this
+   * Variable; otherwise, the handler is assumed to have a cb property, which
+   * is invoked with this Variable and a Scheduler instance as parameters,
+   * and is expected to return a (per-second) rate of change. */
+  addHandler: function(hnd) {
+    this.handlers.push(hnd);
+  },
+
+  /* Remove the given handler */
+  removeHandler: function(hnd) {
+    var idx = this.handlers.indexOf(hnd);
+    if (idx != -1) this.handlers.splice(idx, -1);
+  },
+
+  /* Add a late handler
+   *
+   * hnd is an object with a cb property; the latter is invoked with the value
+   * of this Variable as a first parameter and this Variable instance as a
+   * second one. */
+  addLateHandler: function(hnd) {
+    this.lateHandlers.push(hnd);
+  },
+
+  /* Remove the given late handler */
+  removeLateHandler: function(hnd) {
+    var idx = this.lateHandlers.indexOf(hnd);
+    if (idx != -1) this.lateHandlers.splice(idx, -1);
+  },
+
+  /* Run all handlers for this variable and change its value accordingly
+   *
+   * scheduler is a Scheduler instance to derive timing parameters from.
+   * NOTE that all handlers see the value of the Variable *before* the update
+   *      and that the new value is not applied until the updateLate() method
+   *      is called. */
+  update: function(scheduler) {
+    var newValue = this.value;
+    for (var i = 0; i < this.handlers.length; i++) {
+      var hnd = this.handlers[i];
+      if (hnd.rate) {
+        newValue += hnd.rate / scheduler.fps;
+      } else {
+        newValue += hnd.cb(this, scheduler) / scheduler.fps;
+      }
+    }
+    if (this.mod != null) newValue %= this.mod;
+    if (this.min != null && newValue < this.min) newValue = this.min;
+    if (this.max != null && newValue > this.max) newValue = this.max;
+    this._newValue = newValue;
+  },
+
+  /* Run all late handlers
+   *
+   * update() must have been called before. */
+  updateLate: function() {
+    this.value = this._newValue;
+    for (var i = 0; i < this.lateHandlers.length; i++) {
+      this.lateHandlers[i].cb(this.value, this);
+    }
+  },
+
+  constructor: Variable
+};
+
+/* *** FlagSet ***
+ *
+ * A set of bits which can be fixed on, off, or derived from the values of
+ * other flags. */
+
+/* Construct a new instance */
+function FlagSet() {
+  this.values = {};
+  this.derived = {};
+  this.lateHandlers = {};
+  this._revDerived = null;
+}
+
+FlagSet.prototype = {
+  /* Retrieve the value of a flag */
+  get: function(name) {
+    return this.values[name];
+  },
+
+  /* Assign the value of a flag
+   *
+   * Returns whether the value of the flag changed. */
+  set: function(name, value) {
+    if (this.derived.hasOwnProperty(name))
+      throw new Error("Cannot explicitly assign derived flag");
+    return this._set(name, value);
+  },
+
+  /* Create a derived flag
+   *
+   * name is the name to be used by the flag; operation is one of the strings
+   * "and" or "or", and defines the operation to be used for composing the
+   * flags named by the remaining (variadic) arguments.
+   * After creation, any handlers for the flag's name are invoked
+   * unconditionally. */
+  derive: function(name, operation) {
+    this.derived[name] = Array.prototype.slice.call(arguments, 1);
+    delete this.values[name];
+    this._revDerived = null;
+    this._refresh(name);
+  },
+
+  /* Install a handler for the flag named name
+   *
+   * Whenever the named flag changes, the handler's cb() method is invoked
+   * with the value of the updated flag, the name of the update flag, and this
+   * FlagSet instance as arguments, in that order.
+   * The same handler may be used for multiple flags, although it will be
+   * duplicated on deserialization. */
+  addLateHandler: function(name, hnd) {
+    if (this.lateHandlers[name]) {
+      this.lateHandlers[name].push(hnd);
+    } else {
+      this.lateHandlers[name] = [hnd];
+    }
+  },
+
+  /* Remove the given handler from the given flag again */
+  removeLateHandler: function(name, hnd) {
+    var handlers = this.lateHandlers[name];
+    if (! handlers) return;
+    var idx = handlers.indexOf(hnd);
+    if (idx != -1) handlers.splice(idx, 1);
+  },
+
+  /* Assign the value of a flag without validity checks */
+  _set: function(name, value) {
+    if (value == this.values[name]) return false;
+    this.values[name] = value;
+    var dirty = this._getRevDerived(name);
+    if (dirty) {
+      for (var i = 0; i < dirty.length; i++) {
+        this._refresh(dirty[i], value);
+      }
+    }
+    var handlers = this.lateHandlers[name];
+    if (handlers) {
+      for (var i = 0; i < handlers.length; i++) {
+        handlers[i].cb(value, name, this);
+      }
+    }
+    return true;
+  },
+
+  /* Build indexes of derived values if necessary and return a particular
+   * one */
+  _getRevDerived: function(name) {
+    if (this._revDerived == null) {
+      this._revDerived = {};
+      for (var k in this.derived) {
+        if (! this.derived.hasOwnProperty(k)) continue;
+        var v = this.derived[k];
+        // v[0] is the operator.
+        for (var i = 1; i < v.length; i++) {
+          if (! this._revDerived.hasOwnProperty(v[i])) {
+            this._revDerived[v[i]] = [k];
+          } else {
+            this._revDerived[v[i]].push(k);
+          }
+        }
+      }
+    }
+    return this._revDerived[name];
+  },
+
+  /* Update a derived value */
+  _refresh: function(name, newValue) {
+    var entry = this.derived[name];
+    if (! entry) return;
+    var result;
+    switch (entry[0]) {
+      case "and":
+        if (newValue == null) newValue = true;
+        result = newValue && entry.every(function(ent, index) {
+          return (index == 0) || this.values[ent];
+        }.bind(this));
+        break;
+      case "or":
+        if (newValue == null) newValue = false;
+        result = newValue || entry.some(function(ent, index) {
+          return (index != 0) && this.values[ent];
+        }.bind(this));
+        break;
+      default:
+        throw new Error("Unsupported derived flag operation: " +
+          entry[0]);
+    }
+    this._set(name, result);
+  },
+
+  constructor: FlagSet
+};
+
+/* *** Animator ***
+ *
+ * Feature-deprived roll-your-own CSS transitions because the real CSS
+ * transitions do not work well enough.
+ *
+ * Animator instances do *not* cooperate with serialization; create them anew
+ * together with your DOM. */
+
+/* Construct a new instance
+ *
+ * transitionDuration is the length (in seconds) that transitioning to a new
+ * value should take; the value can be reconfigured after instantiation via
+ * the same-named property. easingMode is one of "linear", "quadratic",
+ * "cubic", and selects a polynomial to use for interpolation during
+ * transitions. Both transitionDuration and easingMode can be overridden for
+ * a particular transition in the set() method. */
+function Animator(transitionDuration, easingMode) {
+  if (easingMode == null) easingMode = 'linear';
+  this.transitionDuration = transitionDuration;
+  this.easingMode = easingMode;
+  this.animatables = {};
+  this._timer = null;
+  this._nextID = 1;
+}
+
+Animator.prototype = {
+  /* Register an animatable with an initial value and a rendering function
+   *
+   * render is a function (i.e. *not* an object with a cb property) that is
+   * invoked to actually apply the value calculated by the animator.
+   * The initial value is rendered unconditionally the first time run() is
+   * invoked.
+   * value is the intial value of the variable to be animated; it must be
+   * numeric or null; in the latter case, no transition is performed when
+   * the value is set first.
+   *
+   * Returns a function that wraps the set() method by passing it the ID of
+   * the newly-created Animatable; the same ID is exposed as the "id" property
+   * of the return value. */
+  register: function(render, value) {
+    var id = this._nextID++;
+    this.animatables[id] = {value: value, newValue: value, oldValue: null,
+      render: render, transitions: []};
+    var ret = function(value, duration, easing) {
+      this.set(id, value, duration, easing);
+    }.bind(this);
+    ret.id = id;
+    return ret;
+  },
+
+  /* Set the value of the given animatable to value
+   *
+   * duration, if not null, overrides the default transition duration. This
+   * will schedule a transition as appropriate. */
+  set: function(id, value, duration, easing) {
+    if (duration == null) duration = this.transitionDuration;
+    if (easing == null) easing = this.easingMode;
+    var anim = this.animatables[id];
+    if (duration == 0 || anim.value == null) {
+      anim.value = value;
+      anim.newValue = value;
+    } else if (value != anim.newValue) {
+      // [target time, linear coefficient, quadratic coefficient,
+      // cubic coefficient]
+      duration *= 1e3;
+      var now = performance.now(), diff = value - anim.newValue;
+      var linear = 0, quadratic = 0, cubic = 0;
+      switch (easing) {
+        case "quadratic":
+          quadratic = -diff / (duration * duration);
+          break;
+        case "cubic":
+          var sqd = duration * duration;
+          cubic = - 2 * diff / (sqd * duration);
+          quadratic = - 3 * diff / sqd;
+          break;
+        default:
+          linear = diff / duration;
+          break;
+      }
+      anim.transitions.push([now + duration, linear, quadratic, cubic]);
+      anim.newValue = value;
+    }
+  },
+
+  /* Perform a single round of animation and schedule another one */
+  run: function() {
+    if (this._timer == null)
+      this._timer = requestAnimationFrame(function() {
+        this._timer = null;
+        this.run();
+      }.bind(this));
+    var now = performance.now();
+    for (var k in this.animatables) {
+      var v = this.animatables[k];
+      if (v.transitions.length) {
+        var accum = v.newValue;
+        v.transitions = v.transitions.filter(function(t) {
+          var x = now - t[0];
+          if (x >= 0) return false;
+          accum += ((t[3] * x + t[2]) * x + t[1]) * x;
+          return true;
+        }.bind(this));
+        v.value = accum;
+      }
+      if (v.value == v.oldValue) continue;
+      v.render(v.value);
+      v.oldValue = v.value;
+    }
+  },
+
+  /* Stop animating */
+  stop: function() {
+    if (this._timer != null) {
+      cancelAnimationFrame(this._timer);
+      this._timer = null;
+    }
+    for (var k in this.animatables) {
+      var v = this.animatables[k];
+      if (! v.transitions.length) continue;
+      v.transitions = [];
+      v.value = v.newValue;
+      if (v.value == v.oldValue) continue;
+      v.render(v.value);
+      v.oldValue = v.value;
+    }
+  },
+
+  constructor: Animator
+};
