@@ -704,10 +704,10 @@ Animator.prototype = {
       var now = performance.now(), diff = value - anim.newValue;
       var linear = 0, quadratic = 0, cubic = 0;
       switch (easing) {
-        case 'quadratic':
+        case "quadratic":
           quadratic = -diff / (duration * duration);
           break;
-        case 'cubic':
+        case "cubic":
           var sqd = duration * duration;
           cubic = - 2 * diff / (sqd * duration);
           quadratic = - 3 * diff / sqd;
